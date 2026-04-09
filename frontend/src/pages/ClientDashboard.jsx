@@ -60,20 +60,19 @@ function MatriculaPlaca({ matricula }) {
 
   return (
     <div style={styles.matriculaPlaca}>
-      <div style={styles.matriculaIzq}>
+      <div style={styles.matriculaLeft}>
+        <div style={styles.matriculaFlag}>
+          <svg width="40" height="30" viewBox="0 0 40 30">
+            <rect width="13.33" height="30" fill="#c60b1e"/>
+            <rect x="13.33" width="13.33" height="30" fill="#ffc400"/>
+            <rect x="26.66" width="13.34" height="30" fill="#003399"/>
+          </svg>
+        </div>
         <span style={styles.matriculaE}>E</span>
-        <div style={styles.matriculaBanda}></div>
       </div>
-      <div style={styles.matriculaCentro}>
+      <div style={styles.matriculaCenter}>
         <span style={styles.matriculaPais}>ESPAÑA</span>
         <span style={styles.matriculaNum}>{formatMatricula(matricula)}</span>
-      </div>
-      <div style={styles.matriculaDer}>
-        <svg width="34" height="24" viewBox="0 0 34 24">
-          <rect width="11" height="24" fill="#c60b1e"/>
-          <rect x="11" width="11" height="24" fill="#ffc400"/>
-          <rect x="22" width="12" height="24" fill="#1a3f7c"/>
-        </svg>
       </div>
     </div>
   );
@@ -759,60 +758,53 @@ const styles = {
   statusBadge: { padding: '6px 14px', borderRadius: '12px', color: 'white', fontSize: '12px', fontWeight: '600', textTransform: 'capitalize' },
   matriculaPlaca: { 
     background: '#0ab1e6',
-    padding: '8px 16px', 
-    borderRadius: '8px', 
+    padding: '6px 12px', 
+    borderRadius: '6px', 
     display: 'flex', 
     alignItems: 'center', 
-    gap: '6px',
-    border: '2px solid #fff',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3)',
-    height: '52px'
+    gap: '10px',
+    border: '2px solid rgba(255,255,255,0.8)',
+    boxShadow: '0 3px 10px rgba(0,0,0,0.3)',
+    height: '50px'
   },
-  matriculaIzq: { 
+  matriculaLeft: { 
     display: 'flex', 
-    flexDirection: 'column', 
     alignItems: 'center',
-    marginRight: '4px'
+    gap: '4px'
+  },
+  matriculaFlag: {
+    borderRadius: '3px',
+    overflow: 'hidden',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
   },
   matriculaE: { 
     color: '#003399', 
     background: 'white', 
-    padding: '1px 3px', 
+    padding: '2px 4px', 
     borderRadius: '2px', 
-    fontSize: '11px', 
+    fontSize: '12px', 
     fontWeight: 'bold',
-    lineHeight: 1
+    boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
   },
-  matriculaBanda: {
-    width: '18px',
-    height: '4px',
-    background: 'linear-gradient(90deg, #003399 33%, #ffc400 33%, #ffc400 66%, #c60b1e 66%)',
-    borderRadius: '1px',
-    marginTop: '2px'
-  },
-  matriculaCentro: { 
+  matriculaCenter: { 
     display: 'flex', 
     flexDirection: 'column', 
-    alignItems: 'center',
-    flex: 1
+    alignItems: 'center'
   },
   matriculaPais: { 
-    color: 'white', 
-    fontSize: '6px', 
+    color: '#fff', 
+    fontSize: '7px', 
     fontWeight: 'bold',
-    textShadow: '0 1px 2px rgba(0,0,0,0.3)',
-    letterSpacing: '0.5px'
+    letterSpacing: '0.5px',
+    textShadow: '0 1px 2px rgba(0,0,0,0.4)'
   },
   matriculaNum: { 
     color: '#000', 
-    fontSize: '16px', 
+    fontSize: '18px', 
     fontWeight: 'bold', 
     fontFamily: 'Arial, sans-serif',
-    letterSpacing: '1px',
-    textShadow: '0 1px 0 rgba(255,255,255,0.3)'
-  },
-  matriculaDer: {
-    marginLeft: '4px'
+    letterSpacing: '2px',
+    textShadow: '0 1px 0 rgba(255,255,255,0.4)'
   },
   editBtn: { padding: '6px 14px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' },
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
