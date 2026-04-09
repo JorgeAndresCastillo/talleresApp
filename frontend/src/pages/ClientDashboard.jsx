@@ -60,16 +60,18 @@ function MatriculaPlaca({ matricula }) {
 
   return (
     <div style={styles.matriculaPlaca}>
-      <div style={styles.matriculaFlagBox}>
-        <svg width="50" height="36" viewBox="0 0 50 36">
-          <rect width="16.66" height="36" fill="#c60b1e"/>
-          <rect x="16.66" width="16.66" height="36" fill="#ffc400"/>
-          <rect x="33.33" width="16.67" height="36" fill="#003399"/>
+      <div style={styles.matriculaFlag}>
+        <svg width="40" height="32" viewBox="0 0 40 32">
+          <rect width="13.33" height="32" fill="#c60b1e"/>
+          <rect x="13.33" width="13.33" height="32" fill="#ffc400"/>
+          <rect x="26.66" width="13.34" height="32" fill="#003399"/>
         </svg>
-        <div style={styles.matriculaEBox}>E</div>
+      </div>
+      <div style={styles.matriculaContent}>
+        <div style={styles.matriculaLetter}>E</div>
         <div style={styles.matriculaPais}>ESPAÑA</div>
       </div>
-      <div style={styles.matriculaNum}>{formatMatricula(matricula)}</div>
+      <div style={styles.matriculaNumber}>{formatMatricula(matricula)}</div>
     </div>
   );
 }
@@ -754,37 +756,40 @@ const styles = {
   statusBadge: { padding: '6px 14px', borderRadius: '12px', color: 'white', fontSize: '12px', fontWeight: '600', textTransform: 'capitalize' },
   matriculaPlaca: { 
     background: 'white',
-    padding: '4px 8px', 
-    borderRadius: '4px', 
+    padding: '3px 6px', 
+    borderRadius: '3px', 
     display: 'flex', 
     alignItems: 'center', 
-    gap: '8px',
-    border: '1px solid #ddd',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.2), inset 0 1px 2px rgba(0,0,0,0.05)',
-    height: '44px'
+    gap: '6px',
+    border: '2px solid #666',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+    height: '38px'
   },
-  matriculaFlagBox: { 
+  matriculaFlag: {
+    borderRadius: '2px',
+    overflow: 'hidden',
+    lineHeight: 0
+  },
+  matriculaContent: { 
     display: 'flex', 
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '1px'
+    marginLeft: '2px'
   },
-  matriculaEBox: { 
-    color: 'white',
-    background: '#003399',
-    padding: '1px 4px', 
-    borderRadius: '2px', 
-    fontSize: '10px', 
-    fontWeight: 'bold'
+  matriculaLetter: { 
+    color: '#003399',
+    fontSize: '12px', 
+    fontWeight: 'bold',
+    lineHeight: 1.2
   },
   matriculaPais: { 
     color: '#003399', 
-    fontSize: '6px', 
+    fontSize: '5px', 
     fontWeight: 'bold',
-    letterSpacing: '0.5px'
+    letterSpacing: '0.3px'
   },
-  matriculaNum: { 
-    color: '#333', 
+  matriculaNumber: { 
+    color: '#111', 
     fontSize: '18px', 
     fontWeight: 'bold', 
     fontFamily: 'Arial, sans-serif',
