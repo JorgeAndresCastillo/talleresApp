@@ -540,7 +540,6 @@ const ClientDashboard = () => {
           </div>
         </div>
       )}
-      )}
 
       {showItvModal && (
         <div style={styles.modalOverlay}>
