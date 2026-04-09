@@ -171,13 +171,23 @@ router.put("/:id/completar", authenticate, async (req, res) => {
     if (req.user.rol !== "admin" && req.user.rol !== "mecanico") {
       return res.status(403).json({ msg: "Solo admin o mecanico" });
     }
-    const { descripcion, precio } = req.body;
+    const { descripcion, precio, sugerencia } = req.body;
     const result = await pool.query(
       "UPDATE trabajos SET hora_fin = CURRENT_TIMESTAMP, estado = 'completado', descripcion = COALESCE($1, descripcion), precio = COALESCE($2, precio) WHERE id = $3 AND (mecanico_id = $4 OR $5 = 'admin') RETURNING *",
       [descripcion, precio, req.params.id, req.user.id, req.user.rol]
     );
     if (result.rows.length === 0) return res.status(404).json({ msg: "Trabajo no encontrado" });
-    res.json(result.rows[0]);
+    
+    const trabajo = result.rows[0];
+    
+    if (sugerencia && trabajo.coche_id) {
+      await pool.query(
+        "INSERT INTO historial (coche_id, tipo, descripcion, mecanico_id, siguiente_fecha, siguiente_kilometraje) VALUES ($1, 'sugerencia', $2, $3, $4, $5)",
+        [trabajo.coche_id, sugerencia.descripcion, req.user.id, sugerencia.fecha || null, sugerencia.kilometraje || null]
+      );
+    }
+    
+    res.json(trabajo);
   } catch (err) {
     console.error(err.message);
     if (err.code === "42703") {

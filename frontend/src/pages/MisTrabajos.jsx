@@ -10,7 +10,15 @@ const MisTrabajos = () => {
   const [loading, setLoading] = useState(true);
   const [selectedTrabajo, setSelectedTrabajo] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [completarData, setCompletarData] = useState({ descripcion: '', precio: '' });
+  const [completarData, setCompletarData] = useState({ 
+    descripcion: '', 
+    precio: '',
+    sugerencia: {
+      descripcion: '',
+      fecha: '',
+      kilometraje: ''
+    }
+  });
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -53,13 +61,20 @@ const MisTrabajos = () => {
 
   const handleCompletar = async (id) => {
     try {
+      const sugerencia = completarData.sugerencia?.descripcion ? {
+        descripcion: completarData.sugerencia.descripcion,
+        fecha: completarData.sugerencia.fecha || null,
+        kilometraje: completarData.sugerencia.kilometraje ? parseInt(completarData.sugerencia.kilometraje) : null
+      } : null;
+      
       await api.trabajos.completar(id, {
         descripcion: completarData.descripcion,
-        precio: parseFloat(completarData.precio) || 0
+        precio: parseFloat(completarData.precio) || 0,
+        sugerencia
       });
       setShowModal(false);
       setSelectedTrabajo(null);
-      setCompletarData({ descripcion: '', precio: '' });
+      setCompletarData({ descripcion: '', precio: '', sugerencia: { descripcion: '', fecha: '', kilometraje: '' } });
       loadTrabajos();
     } catch (err) {
       alert('Error al completar trabajo');
@@ -70,7 +85,8 @@ const MisTrabajos = () => {
     setSelectedTrabajo(trabajo);
     setCompletarData({
       descripcion: trabajo.descripcion || '',
-      precio: trabajo.precio || ''
+      precio: trabajo.precio || '',
+      sugerencia: { descripcion: '', fecha: '', kilometraje: '' }
     });
     setShowModal(true);
   };
@@ -244,6 +260,42 @@ const MisTrabajos = () => {
               style={styles.input}
             />
 
+            <div style={styles.sugerenciaSection}>
+              <h4 style={styles.sugerenciaTitle}>💡 Sugerencia de próximo servicio</h4>
+              <input
+                type="text"
+                placeholder="Descripción (ej: Cambio de aceite en 5000km)"
+                value={completarData.sugerencia.descripcion}
+                onChange={(e) => setCompletarData({
+                  ...completarData, 
+                  sugerencia: {...completarData.sugerencia, descripcion: e.target.value}
+                })}
+                style={styles.input}
+              />
+              <div style={{display: 'flex', gap: '10px'}}>
+                <input
+                  type="date"
+                  placeholder="Fecha próxima"
+                  value={completarData.sugerencia.fecha}
+                  onChange={(e) => setCompletarData({
+                    ...completarData, 
+                    sugerencia: {...completarData.sugerencia, fecha: e.target.value}
+                  })}
+                  style={{...styles.input, flex: 1}}
+                />
+                <input
+                  type="number"
+                  placeholder="Km próximo"
+                  value={completarData.sugerencia.kilometraje}
+                  onChange={(e) => setCompletarData({
+                    ...completarData, 
+                    sugerencia: {...completarData.sugerencia, kilometraje: e.target.value}
+                  })}
+                  style={{...styles.input, flex: 1}}
+                />
+              </div>
+            </div>
+
             <div style={styles.modalActions}>
               <button onClick={() => handleCompletar(selectedTrabajo.id)} style={styles.completeBtn}>
                 ✅ Completar
@@ -363,7 +415,9 @@ const styles = {
   input: { width: '100%', padding: '12px 16px', marginBottom: '12px', border: '1px solid #333', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box', background: '#1a1a2e', color: 'white' },
   modalActions: { display: 'flex', gap: '12px', marginTop: '20px' },
   completeBtn: { flex: 1, padding: '12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' },
-  cancelBtn: { flex: 1, padding: '12px', background: '#333', color: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }
+  cancelBtn: { flex: 1, padding: '12px', background: '#333', color: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' },
+  sugerenciaSection: { marginTop: '16px', padding: '16px', background: '#1a1a2e', borderRadius: '8px', borderLeft: '3px solid #f59e0b' },
+  sugerenciaTitle: { color: '#f59e0b', fontSize: '14px', fontWeight: '600', marginBottom: '12px' }
 };
 
 export default MisTrabajos;
