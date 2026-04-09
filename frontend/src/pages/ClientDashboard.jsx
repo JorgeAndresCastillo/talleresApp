@@ -89,6 +89,9 @@ const ClientDashboard = () => {
   const [showModal, setShowModal] = useState(false);
   const [showItvModal, setShowItvModal] = useState(false);
   const [editingItvCoche, setEditingItvCoche] = useState(null);
+  const [editCocheModal, setEditCocheModal] = useState(false);
+  const [cocheToEdit, setCocheToEdit] = useState(null);
+  const [editCocheData, setEditCocheData] = useState({});
   const [itvDate, setItvDate] = useState('');
   const [formData, setFormData] = useState({});
   const [activeTab, setActiveTab] = useState('garage');
@@ -151,6 +154,34 @@ const ClientDashboard = () => {
     setEditingItvCoche(coche);
     setItvDate(coche.itv_vigencia || '');
     setShowItvModal(true);
+  };
+
+  const openEditCocheModal = (coche) => {
+    setCocheToEdit(coche);
+    setEditCocheData({
+      marca: coche.marca || '',
+      modelo: coche.modelo || '',
+      anio: coche.anio || '',
+      kilometraje: coche.kilometraje || ''
+    });
+    setEditCocheModal(true);
+  };
+
+  const handleSaveCoche = async () => {
+    try {
+      await api.coches.update(cocheToEdit.id, {
+        marca: editCocheData.marca,
+        modelo: editCocheData.modelo,
+        anio: parseInt(editCocheData.anio) || null,
+        kilometraje: parseInt(editCocheData.kilometraje) || null
+      });
+      setEditCocheModal(false);
+      setCocheToEdit(null);
+      setEditCocheData({});
+      loadData();
+    } catch (err) {
+      alert('Error al guardar cambios');
+    }
   };
 
   const loadHistorial = async (cocheId) => {
@@ -275,6 +306,12 @@ const ClientDashboard = () => {
                           <span style={styles.carModel}>{coche.marca} {coche.modelo}</span>
                           <span style={styles.carYear}>{coche.anio || '-'}</span>
                         </div>
+                        <button 
+                          style={styles.editCarBtn}
+                          onClick={(e) => { e.stopPropagation(); openEditCocheModal(coche); }}
+                        >
+                          ✏️
+                        </button>
                       </div>
                     ))
                   )}
@@ -533,6 +570,23 @@ const ClientDashboard = () => {
               <button onClick={() => { setShowModal(false); setFormData({}); }} style={styles.cancelBtn}>
                 Cancelar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editCocheModal && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <h3 style={styles.modalTitle}>Editar Vehículo</h3>
+            <p style={{color: '#888', marginBottom: '16px'}}>{cocheToEdit?.matricula}</p>
+            <input type="text" placeholder="Marca" value={editCocheData.marca} onChange={(e) => setEditCocheData({...editCocheData, marca: e.target.value})} style={styles.input} />
+            <input type="text" placeholder="Modelo" value={editCocheData.modelo} onChange={(e) => setEditCocheData({...editCocheData, modelo: e.target.value})} style={styles.input} />
+            <input type="number" placeholder="Año" value={editCocheData.anio} onChange={(e) => setEditCocheData({...editCocheData, anio: e.target.value})} style={styles.input} />
+            <input type="number" placeholder="Kilometraje" value={editCocheData.kilometraje} onChange={(e) => setEditCocheData({...editCocheData, kilometraje: e.target.value})} style={styles.input} />
+            <div style={styles.modalActions}>
+              <button onClick={handleSaveCoche} style={styles.saveBtn}>Guardar</button>
+              <button onClick={() => { setEditCocheModal(false); setCocheToEdit(null); }} style={styles.cancelBtn}>Cancelar</button>
             </div>
           </div>
         </div>
@@ -797,6 +851,7 @@ const styles = {
     marginLeft: '8px'
   },
   editBtn: { padding: '6px 14px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' },
+  editCarBtn: { padding: '6px 8px', background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' },
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
   modal: { background: '#16213e', padding: '30px', borderRadius: '16px', width: '450px' },
   modalTitle: { fontSize: '20px', fontWeight: '600', color: 'white', marginBottom: '20px' },
