@@ -61,22 +61,45 @@ router.get("/", authenticate, async (req, res) => {
 
 router.put("/:id", authenticate, async (req, res) => {
   try {
-    if (req.user.rol !== "admin" && req.user.rol !== "mecanico") {
-      return res.status(403).json({ msg: "Solo admin o mecanico" });
-    }
-    const { marca, modelo, anio, kilometraje } = req.body;
+    const { marca, modelo, anio, kilometraje, itv_vigencia } = req.body;
     let query, params;
+    
     if (req.user.rol === "admin") {
-      query = "UPDATE coches SET marca = COALESCE($1, marca), modelo = COALESCE($2, modelo), anio = COALESCE($3, anio), kilometraje = COALESCE($4, kilometraje) WHERE id = $5 RETURNING *";
-      params = [marca, modelo, anio, kilometraje, req.params.id];
+      query = "UPDATE coches SET marca = COALESCE($1, marca), modelo = COALESCE($2, modelo), anio = COALESCE($3, anio), kilometraje = COALESCE($4, kilometraje), itv_vigencia = COALESCE($5, itv_vigencia) WHERE id = $6 RETURNING *";
+      params = [marca, modelo, anio, kilometraje, itv_vigencia, req.params.id];
+    } else if (req.user.rol === "mecanico") {
+      query = "UPDATE coches SET marca = COALESCE($1, marca), modelo = COALESCE($2, modelo), anio = COALESCE($3, anio), kilometraje = COALESCE($4, kilometraje), itv_vigencia = COALESCE($5, itv_vigencia) WHERE id = $6 RETURNING *";
+      params = [marca, modelo, anio, kilometraje, itv_vigencia, req.params.id];
     } else {
-      query = "UPDATE coches SET marca = COALESCE($1, marca), modelo = COALESCE($2, modelo), anio = COALESCE($3, anio), kilometraje = COALESCE($4, kilometraje) WHERE id = $5 AND cliente_id = $6 RETURNING *";
-      params = [marca, modelo, anio, kilometraje, req.params.id, req.user.id];
+      query = "UPDATE coches SET marca = COALESCE($1, marca), modelo = COALESCE($2, modelo), anio = COALESCE($3, anio), kilometraje = COALESCE($4, kilometraje), itv_vigencia = COALESCE($5, itv_vigencia) WHERE id = $6 AND cliente_id = $7 RETURNING *";
+      params = [marca, modelo, anio, kilometraje, itv_vigencia, req.params.id, req.user.id];
     }
+    
     const result = await pool.query(query, params);
     if (result.rows.length === 0) return res.status(404).json({ msg: "Coche no encontrado" });
     res.json(result.rows[0]);
   } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ msg: "Error del servidor" });
+  }
+});
+
+router.put("/:id/matricula", authenticate, async (req, res) => {
+  try {
+    if (req.user.rol !== "admin") {
+      return res.status(403).json({ msg: "Solo admin puede cambiar matrícula" });
+    }
+    const { matricula } = req.body;
+    if (!matricula) return res.status(400).json({ msg: "Matrícula obligatoria" });
+    
+    const result = await pool.query(
+      "UPDATE coches SET matricula = $1 WHERE id = $2 RETURNING *",
+      [matricula, req.params.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ msg: "Coche no encontrado" });
+    res.json(result.rows[0]);
+  } catch (err) {
+    if (err.code === "23505") return res.status(400).json({ msg: "Matrícula ya existe" });
     console.error(err.message);
     res.status(500).json({ msg: "Error del servidor" });
   }
