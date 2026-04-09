@@ -119,7 +119,13 @@ const ClientDashboard = () => {
       ]);
       setCoches(Array.isArray(cochesRes) ? cochesRes : []);
       setCitas(Array.isArray(citasRes) ? citasRes : []);
-      if (cochesRes.length > 0 && !selectedCoche) {
+      
+      if (Array.isArray(cochesRes) && selectedCoche) {
+        const updatedCoche = cochesRes.find(c => c.id === selectedCoche.id);
+        if (updatedCoche) {
+          setSelectedCoche(updatedCoche);
+        }
+      } else if (cochesRes.length > 0 && !selectedCoche) {
         setSelectedCoche(cochesRes[0]);
       }
     } catch (err) {
