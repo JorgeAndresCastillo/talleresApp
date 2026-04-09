@@ -49,6 +49,15 @@ function Car3DViewer({ color = "#3b82f6" }) {
 }
 
 function MatriculaPlaca({ matricula }) {
+  const formatMatricula = (mat) => {
+    if (!mat) return '----';
+    const clean = mat.replace(/\s/g, '').toUpperCase();
+    if (clean.length === 7) {
+      return `${clean.slice(0, 4)} ${clean.slice(4)}`;
+    }
+    return mat.toUpperCase();
+  };
+
   return (
     <div style={styles.matriculaPlaca}>
       <div style={styles.matriculaIzq}>
@@ -57,13 +66,13 @@ function MatriculaPlaca({ matricula }) {
       </div>
       <div style={styles.matriculaCentro}>
         <span style={styles.matriculaPais}>ESPAÑA</span>
-        <span style={styles.matriculaNum}>{matricula}</span>
+        <span style={styles.matriculaNum}>{formatMatricula(matricula)}</span>
       </div>
       <div style={styles.matriculaDer}>
-        <svg width="30" height="20" viewBox="0 0 30 20">
-          <rect width="10" height="20" fill="#c60b1e"/>
-          <rect x="10" width="10" height="20" fill="#ffc400"/>
-          <rect x="20" width="10" height="20" fill="#1a3f7c"/>
+        <svg width="34" height="24" viewBox="0 0 34 24">
+          <rect width="11" height="24" fill="#c60b1e"/>
+          <rect x="11" width="11" height="24" fill="#ffc400"/>
+          <rect x="22" width="12" height="24" fill="#1a3f7c"/>
         </svg>
       </div>
     </div>
@@ -289,18 +298,44 @@ const ClientDashboard = () => {
 
                       <div style={styles.carDetails}>
                         <div style={styles.carTitleRow}>
-                          <h3 style={styles.detailTitle}>{selectedCoche.marca} {selectedCoche.modelo}</h3>
+                          <div>
+                            <h3 style={styles.detailTitle}>{selectedCoche.marca} {selectedCoche.modelo}</h3>
+                            <span style={{color: '#888', fontSize: '14px'}}>{selectedCoche.anio || '-'}</span>
+                          </div>
                           <MatriculaPlaca matricula={selectedCoche.matricula} />
                         </div>
+                        
                         <div style={styles.detailsGrid}>
                           <div style={styles.detailBox}>
-                            <span style={styles.detailLabel}>AÑO</span>
-                            <span style={styles.detailValue}>{selectedCoche.anio || '-'}</span>
+                            <span style={styles.detailLabel}>MATRÍCULA</span>
+                            <span style={{...styles.detailValue, color: '#0ab1e6'}}>{selectedCoche.matricula}</span>
                           </div>
                           <div style={styles.detailBox}>
                             <span style={styles.detailLabel}>KILOMETRAJE</span>
                             <span style={styles.detailValue}>{(selectedCoche.kilometraje || 0).toLocaleString()} km</span>
                           </div>
+                          <div style={styles.detailBox}>
+                            <span style={styles.detailLabel}>ESTADO</span>
+                            <span style={{...styles.statusBadge, background: selectedCoche.estado === 'aprobado' ? '#10b981' : '#f59e0b'}}>
+                              {selectedCoche.estado === 'aprobado' ? '✓ Activo' : '⏳ Pendiente'}
+                            </span>
+                          </div>
+                          <div style={styles.detailBox}>
+                            <span style={styles.detailLabel}>ITV</span>
+                            {selectedCoche.itv_vigencia ? (
+                              <span style={{...styles.detailValue, color: new Date(selectedCoche.itv_vigencia) < new Date() ? '#ef4444' : '#10b981'}}>
+                                {new Date(selectedCoche.itv_vigencia).toLocaleDateString('es-ES')}
+                              </span>
+                            ) : (
+                              <span style={{color: '#f59e0b', fontSize: '13px'}}>No registrada</span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div style={styles.carActions}>
+                          <button onClick={() => openItvModal(selectedCoche)} style={styles.actionBtn}>
+                            📅 {selectedCoche.itv_vigencia ? 'Editar ITV' : 'Añadir ITV'}
+                          </button>
                         </div>
                       </div>
                     </>
@@ -710,6 +745,8 @@ const styles = {
   detailBox: { display: 'flex', flexDirection: 'column', gap: '4px', padding: '16px', background: '#1a1a2e', borderRadius: '8px' },
   detailLabel: { color: '#666', fontSize: '11px', fontWeight: '600', letterSpacing: '0.5px' },
   detailValue: { color: 'white', fontSize: '16px', fontWeight: '600' },
+  carActions: { marginTop: '20px', display: 'flex', gap: '12px' },
+  actionBtn: { padding: '10px 16px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' },
   noSelection: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '300px', color: '#666' },
   noSelectionIcon: { fontSize: '48px', marginBottom: '16px' },
   emptyState: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px', color: '#666' },
@@ -723,14 +760,14 @@ const styles = {
   statusBadge: { padding: '6px 14px', borderRadius: '12px', color: 'white', fontSize: '12px', fontWeight: '600', textTransform: 'capitalize' },
   matriculaPlaca: { 
     background: '#0ab1e6',
-    padding: '6px 12px', 
-    borderRadius: '6px', 
+    padding: '8px 16px', 
+    borderRadius: '8px', 
     display: 'flex', 
     alignItems: 'center', 
-    gap: '8px',
+    gap: '6px',
     border: '2px solid #fff',
-    boxShadow: '0 3px 10px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3)',
-    height: '44px'
+    boxShadow: '0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3)',
+    height: '52px'
   },
   matriculaIzq: { 
     display: 'flex', 
