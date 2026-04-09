@@ -159,10 +159,12 @@ const ClientDashboard = () => {
   const openEditCocheModal = (coche) => {
     setCocheToEdit(coche);
     setEditCocheData({
+      matricula: coche.matricula || '',
       marca: coche.marca || '',
       modelo: coche.modelo || '',
       anio: coche.anio || '',
-      kilometraje: coche.kilometraje || ''
+      kilometraje: coche.kilometraje || '',
+      itv_vigencia: coche.itv_vigencia || ''
     });
     setEditCocheModal(true);
   };
@@ -173,7 +175,8 @@ const ClientDashboard = () => {
         marca: editCocheData.marca,
         modelo: editCocheData.modelo,
         anio: parseInt(editCocheData.anio) || null,
-        kilometraje: parseInt(editCocheData.kilometraje) || null
+        kilometraje: parseInt(editCocheData.kilometraje) || null,
+        itv_vigencia: editCocheData.itv_vigencia || null
       });
       setEditCocheModal(false);
       setCocheToEdit(null);
@@ -579,11 +582,16 @@ const ClientDashboard = () => {
         <div style={styles.modalOverlay}>
           <div style={styles.modal}>
             <h3 style={styles.modalTitle}>Editar Vehículo</h3>
-            <p style={{color: '#888', marginBottom: '16px'}}>{cocheToEdit?.matricula}</p>
-            <input type="text" placeholder="Marca" value={editCocheData.marca} onChange={(e) => setEditCocheData({...editCocheData, marca: e.target.value})} style={styles.input} />
-            <input type="text" placeholder="Modelo" value={editCocheData.modelo} onChange={(e) => setEditCocheData({...editCocheData, modelo: e.target.value})} style={styles.input} />
-            <input type="number" placeholder="Año" value={editCocheData.anio} onChange={(e) => setEditCocheData({...editCocheData, anio: e.target.value})} style={styles.input} />
-            <input type="number" placeholder="Kilometraje" value={editCocheData.kilometraje} onChange={(e) => setEditCocheData({...editCocheData, kilometraje: e.target.value})} style={styles.input} />
+            <input type="text" placeholder="Matrícula" value={editCocheData.matricula} onChange={(e) => setEditCocheData({...editCocheData, matricula: e.target.value})} style={styles.input} />
+            <div style={{display: 'flex', gap: '10px'}}>
+              <input type="text" placeholder="Marca" value={editCocheData.marca} onChange={(e) => setEditCocheData({...editCocheData, marca: e.target.value})} style={{...styles.input, flex: 1}} />
+              <input type="text" placeholder="Modelo" value={editCocheData.modelo} onChange={(e) => setEditCocheData({...editCocheData, modelo: e.target.value})} style={{...styles.input, flex: 1}} />
+            </div>
+            <div style={{display: 'flex', gap: '10px'}}>
+              <input type="number" placeholder="Año" value={editCocheData.anio} onChange={(e) => setEditCocheData({...editCocheData, anio: e.target.value})} style={{...styles.input, flex: 1}} />
+              <input type="number" placeholder="Kilometraje" value={editCocheData.kilometraje} onChange={(e) => setEditCocheData({...editCocheData, kilometraje: e.target.value})} style={{...styles.input, flex: 1}} />
+            </div>
+            <input type="date" placeholder="Fecha ITV" value={editCocheData.itv_vigencia} onChange={(e) => setEditCocheData({...editCocheData, itv_vigencia: e.target.value})} style={styles.input} />
             <div style={styles.modalActions}>
               <button onClick={handleSaveCoche} style={styles.saveBtn}>Guardar</button>
               <button onClick={() => { setEditCocheModal(false); setCocheToEdit(null); }} style={styles.cancelBtn}>Cancelar</button>
