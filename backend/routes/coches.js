@@ -122,4 +122,52 @@ router.put("/:matricula/estado", authenticate, async (req, res) => {
   }
 });
 
+router.put("/:id/itv", authenticate, async (req, res) => {
+  try {
+    const { itv_vigencia } = req.body;
+    if (req.user.rol === "cliente") {
+      const coche = await pool.query("SELECT id FROM coches WHERE id = $1 AND cliente_id = $2", [req.params.id, req.user.id]);
+      if (coche.rows.length === 0) return res.status(403).json({ msg: "No tienes permisos" });
+    }
+    const result = await pool.query(
+      "UPDATE coches SET itv_vigencia = $1 WHERE id = $2 RETURNING *",
+      [itv_vigencia, req.params.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ msg: "Coche no encontrado" });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ msg: "Error del servidor" });
+  }
+});
+
+router.get("/alerts/itv", authenticate, async (req, res) => {
+  try {
+    let query;
+    if (req.user.rol === "admin" || req.user.rol === "mecanico") {
+      query = "SELECT c.*, u.nombre as cliente_nombre FROM coches c JOIN usuarios u ON c.cliente_id = u.id WHERE c.itv_vigencia IS NOT NULL ORDER BY c.itv_vigencia ASC";
+    } else {
+      query = "SELECT * FROM coches WHERE cliente_id = $1 AND itv_vigencia IS NOT NULL ORDER BY itv_vigencia ASC";
+    }
+    const params = req.user.rol === "cliente" ? [req.user.id] : [];
+    const result = await pool.query(query, params);
+    
+    const today = new Date();
+    const alerts = result.rows.map(coche => {
+      const itvDate = new Date(coche.itv_vigencia);
+      const daysUntil = Math.ceil((itvDate - today) / (1000 * 60 * 60 * 24));
+      let status = 'ok';
+      if (daysUntil < 0) status = 'expired';
+      else if (daysUntil <= 30) status = 'urgent';
+      else if (daysUntil <= 60) status = 'warning';
+      return { ...coche, days_until_itv: daysUntil, status };
+    });
+    
+    res.json(alerts);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ msg: "Error del servidor" });
+  }
+});
+
 module.exports = router;

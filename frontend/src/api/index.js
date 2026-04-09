@@ -60,6 +60,12 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify({ estado })
     }).then(res => res.json()),
+    updateItv: (id, itv_vigencia) => fetch(`${API_URL}/coches/${id}/itv`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ itv_vigencia })
+    }).then(res => res.json()),
+    getItvAlerts: () => fetch(`${API_URL}/coches/alerts/itv`, { headers: getHeaders() }).then(res => res.json()),
     delete: (id) => fetch(`${API_URL}/coches/${id}`, {
       method: 'DELETE',
       headers: getHeaders()

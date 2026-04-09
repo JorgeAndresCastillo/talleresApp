@@ -81,6 +81,9 @@ const ClientDashboard = () => {
   const [citas, setCitas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showItvModal, setShowItvModal] = useState(false);
+  const [editingItvCoche, setEditingItvCoche] = useState(null);
+  const [itvDate, setItvDate] = useState('');
   const [formData, setFormData] = useState({});
   const [activeTab, setActiveTab] = useState('garage');
 
@@ -114,6 +117,34 @@ const ClientDashboard = () => {
       console.error(err);
     }
     setLoading(false);
+  };
+
+  const loadItvAlerts = async () => {
+    try {
+      const res = await api.coches.getItvAlerts();
+      return Array.isArray(res) ? res : [];
+    } catch (err) {
+      console.error(err);
+      return [];
+    }
+  };
+
+  const handleSaveItv = async () => {
+    try {
+      await api.coches.updateItv(editingItvCoche.id, itvDate);
+      setShowItvModal(false);
+      setEditingItvCoche(null);
+      setItvDate('');
+      loadData();
+    } catch (err) {
+      alert('Error al guardar ITV');
+    }
+  };
+
+  const openItvModal = (coche) => {
+    setEditingItvCoche(coche);
+    setItvDate(coche.itv_vigencia || '');
+    setShowItvModal(true);
   };
 
   const loadHistorial = async (cocheId) => {
@@ -159,6 +190,7 @@ const ClientDashboard = () => {
     { id: 'garage', label: 'Mi Garage', icon: '🚗' },
     { id: 'citas', label: 'Mis Citas', icon: '📅' },
     { id: 'historial', label: 'Historial', icon: '📋' },
+    { id: 'itv', label: 'ITV', icon: '📋' },
   ];
 
   if (loading) return <div style={styles.loading}>Cargando...</div>;
@@ -366,6 +398,9 @@ const ClientDashboard = () => {
               </div>
             </div>
           )}
+
+          {activeTab === 'itv' && <ItvTab loadItvAlerts={loadItvAlerts} openItvModal={openItvModal} />}
+
         </div>
       </main>
 
@@ -470,6 +505,158 @@ const ClientDashboard = () => {
           </div>
         </div>
       )}
+      )}
+
+      {showItvModal && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <h3 style={styles.modalTitle}>Fecha ITV - {editingItvCoche?.matricula}</h3>
+            <p style={{color: '#888', marginBottom: '16px'}}>
+              {editingItvCoche?.marca} {editingItvCoche?.modelo}
+            </p>
+            <label style={{color: '#888', fontSize: '13px', marginBottom: '8px', display: 'block'}}>
+              Fecha de vencimiento ITV:
+            </label>
+            <input
+              type="date"
+              value={itvDate}
+              onChange={(e) => setItvDate(e.target.value)}
+              style={styles.input}
+            />
+            <div style={styles.modalActions}>
+              <button onClick={handleSaveItv} style={styles.saveBtn}>
+                Guardar
+              </button>
+              <button onClick={() => { setShowItvModal(false); setEditingItvCoche(null); }} style={styles.cancelBtn}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ItvTab = ({ loadItvAlerts, openItvModal }) => {
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadAlerts();
+  }, []);
+
+  const loadAlerts = async () => {
+    setLoading(true);
+    const data = await loadItvAlerts();
+    setAlerts(data);
+    setLoading(false);
+  };
+
+  const getStatusStyle = (status) => {
+    const styles = {
+      ok: { bg: '#10b981', text: 'OK', icon: '✅' },
+      warning: { bg: '#f59e0b', text: 'Próximo', icon: '⚠️' },
+      urgent: { bg: '#ef4444', text: 'Urgente', icon: '🚨' },
+      expired: { bg: '#64748b', text: 'Vencida', icon: '❌' }
+    };
+    return styles[status] || styles.ok;
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  const formatDays = (days) => {
+    if (days < 0) return `Hace ${Math.abs(days)} días`;
+    if (days === 0) return 'Hoy';
+    if (days === 1) return 'Mañana';
+    return `En ${days} días`;
+  };
+
+  if (loading) return <div style={styles.loadingCenter}>Cargando alertas ITV...</div>;
+
+  const expiredCount = alerts.filter(a => a.status === 'expired').length;
+  const urgentCount = alerts.filter(a => a.status === 'urgent').length;
+  const warningCount = alerts.filter(a => a.status === 'warning').length;
+
+  return (
+    <div>
+      <h2 style={styles.pageTitle}>Alertas de ITV</h2>
+      
+      <div style={styles.statsRow}>
+        <div style={{...styles.statCard, borderLeft: '4px solid #ef4444'}}>
+          <span style={styles.statIcon}>🚨</span>
+          <div>
+            <span style={styles.statValue}>{expiredCount}</span>
+            <span style={styles.statLabel}>Vencidas</span>
+          </div>
+        </div>
+        <div style={{...styles.statCard, borderLeft: '4px solid #f59e0b'}}>
+          <span style={styles.statIcon}>⚠️</span>
+          <div>
+            <span style={styles.statValue}>{urgentCount}</span>
+            <span style={styles.statLabel}>Urgentes</span>
+          </div>
+        </div>
+        <div style={{...styles.statCard, borderLeft: '4px solid #10b981'}}>
+          <span style={styles.statIcon}>✅</span>
+          <div>
+            <span style={styles.statValue}>{warningCount}</span>
+            <span style={styles.statLabel}>Próximas</span>
+          </div>
+        </div>
+      </div>
+
+      <div style={styles.tableContainer}>
+        {alerts.length === 0 ? (
+          <div style={styles.emptyState}>
+            <span style={styles.emptyIcon}>📋</span>
+            <p>No hay alertas de ITV</p>
+            <p style={{fontSize: '13px', marginTop: '8px', color: '#666'}}>Registra la fecha de vencimiento de tu ITV</p>
+          </div>
+        ) : (
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}>VEHÍCULO</th>
+                <th style={styles.th}>ITV VIGENCIA</th>
+                <th style={styles.th}>DÍAS</th>
+                <th style={styles.th}>ESTADO</th>
+                <th style={styles.th}>ACCIONES</th>
+              </tr>
+            </thead>
+            <tbody>
+              {alerts.map(alert => {
+                const statusStyle = getStatusStyle(alert.status);
+                return (
+                  <tr key={alert.id} style={styles.tr}>
+                    <td style={styles.td}>
+                      <span style={styles.matriculaSmall}>{alert.matricula}</span>
+                      <br/>
+                      <small style={{color: '#666'}}>{alert.marca} {alert.modelo}</small>
+                    </td>
+                    <td style={styles.td}>{formatDate(alert.itv_vigencia)}</td>
+                    <td style={{...styles.td, color: statusStyle.bg, fontWeight: 'bold'}}>
+                      {formatDays(alert.days_until_itv)}
+                    </td>
+                    <td style={styles.td}>
+                      <span style={{...styles.statusBadge, background: statusStyle.bg}}>
+                        {statusStyle.icon} {statusStyle.text}
+                      </span>
+                    </td>
+                    <td style={styles.td}>
+                      <button onClick={() => openItvModal(alert)} style={styles.editBtn}>📅 Editar</button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 };
@@ -477,6 +664,12 @@ const ClientDashboard = () => {
 const styles = {
   container: { display: 'flex', minHeight: '100vh', background: '#1a1a2e', fontFamily: "'Inter', -apple-system, sans-serif" },
   loading: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontSize: '18px', color: '#888' },
+  loadingCenter: { display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '60px', color: '#888' },
+  statsRow: { display: 'flex', gap: '20px', marginBottom: '24px', flexWrap: 'wrap' },
+  statCard: { flex: 1, minWidth: '150px', background: '#16213e', borderRadius: '12px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' },
+  statIcon: { fontSize: '32px' },
+  statValue: { display: 'block', fontSize: '28px', fontWeight: '700', color: 'white' },
+  statLabel: { display: 'block', fontSize: '13px', color: '#888', marginTop: '2px' },
   sidebar: { width: '260px', background: '#16213e', color: 'white', display: 'flex', flexDirection: 'column' },
   logo: { display: 'flex', alignItems: 'center', gap: '12px', padding: '24px 20px', borderBottom: '1px solid rgba(255,255,255,0.1)' },
   logoIcon: { fontSize: '28px' },
@@ -585,6 +778,7 @@ const styles = {
   matriculaDer: {
     marginLeft: '4px'
   },
+  editBtn: { padding: '6px 14px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' },
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
   modal: { background: '#16213e', padding: '30px', borderRadius: '16px', width: '450px' },
   modalTitle: { fontSize: '20px', fontWeight: '600', color: 'white', marginBottom: '20px' },
