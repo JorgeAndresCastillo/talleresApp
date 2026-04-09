@@ -62,9 +62,9 @@ function MatriculaPlaca({ matricula }) {
     <div style={styles.matriculaPlaca}>
       <div style={styles.matriculaFlag}>
         <svg width="40" height="32" viewBox="0 0 40 32">
-          <rect width="13.33" height="32" fill="#c60b1e"/>
-          <rect x="13.33" width="13.33" height="32" fill="#ffc400"/>
-          <rect x="26.66" width="13.34" height="32" fill="#c60b1e"/>
+          <rect width="40" height="10.66" fill="#c60b1e"/>
+          <rect y="10.66" width="40" height="10.66" fill="#ffc400"/>
+          <rect y="21.33" width="40" height="10.67" fill="#c60b1e"/>
         </svg>
       </div>
       <div style={styles.matriculaContent}>
