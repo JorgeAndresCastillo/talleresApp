@@ -156,5 +156,22 @@ export const api = {
 
   notificaciones: {
     list: () => fetch(`${API_URL}/notificaciones`, { headers: getHeaders() }).then(res => res.json())
+  },
+
+  solicitudes: {
+    list: () => fetch(`${API_URL}/solicitudes`, { headers: getHeaders() }).then(res => res.json()),
+    create: (data) => fetch(`${API_URL}/solicitudes`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    }).then(res => res.json()),
+    aprobar: (id) => fetch(`${API_URL}/solicitudes/${id}/aprobar`, {
+      method: 'PUT',
+      headers: getHeaders()
+    }).then(res => res.json()),
+    rechazar: (id) => fetch(`${API_URL}/solicitudes/${id}/rechazar`, {
+      method: 'PUT',
+      headers: getHeaders()
+    }).then(res => res.json())
   }
 };

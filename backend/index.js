@@ -16,6 +16,7 @@ const historialRouter = require('./routes/historial');
 const inventarioRouter = require('./routes/inventario');
 const facturasRouter = require('./routes/facturas');
 const notificacionesRouter = require('./routes/notificaciones');
+const solicitudesRouter = require('./routes/solicitudes');
 app.use('/auth', authRouter);
 app.use('/usuarios', usuariosRouter);
 app.use('/coches', cochesRouter);
@@ -25,6 +26,7 @@ app.use('/historial', historialRouter);
 app.use('/inventario', inventarioRouter);
 app.use('/facturas', facturasRouter);
 app.use('/notificaciones', notificacionesRouter);
+app.use('/solicitudes', solicitudesRouter);
 
 // Ruta de prueba
 app.get('/', (req, res) => {

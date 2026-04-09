@@ -87,3 +87,13 @@ CREATE TABLE notificaciones (
     leida BOOLEAN DEFAULT FALSE,
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE solicitudes_matricula (
+    id SERIAL PRIMARY KEY,
+    coche_id INTEGER REFERENCES coches(id) ON DELETE CASCADE,
+    cliente_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
+    matricula_anterior VARCHAR(20) NOT NULL,
+    matricula_nueva VARCHAR(20) NOT NULL,
+    estado VARCHAR(20) DEFAULT 'pendiente',
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

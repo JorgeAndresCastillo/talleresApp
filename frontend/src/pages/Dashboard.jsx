@@ -32,6 +32,7 @@ const Dashboard = () => {
     { id: 'citas', label: 'Citas', icon: '📅' },
     { id: 'trabajos', label: 'Trabajos', icon: '🔧' },
     ...(isAdmin ? [{ id: 'usuarios', label: 'Usuarios', icon: '👥' }] : []),
+    ...(isAdmin ? [{ id: 'solicitudes', label: 'Solicitudes Matrícula', icon: '🔄' }] : []),
     ...(isAdmin || isMecanico ? [{ id: 'inventario', label: 'Inventario', icon: '📦' }] : []),
     ...(isAdmin ? [{ id: 'facturas', label: 'Facturación', icon: '💰' }] : []),
     { id: 'historial', label: 'Historial', icon: '📋' },
@@ -76,7 +77,8 @@ const Dashboard = () => {
         trabajos: api.trabajos.list,
         inventario: api.inventario.list,
         facturas: api.facturas.list,
-        historial: api.historial.list
+        historial: api.historial.list,
+        solicitudes: api.solicitudes.list
       };
       if (fetchers[activeTab]) {
         const result = await fetchers[activeTab]();
@@ -255,28 +257,93 @@ const Dashboard = () => {
           </table>
         ) : (
           <div style={styles.emptyState}>No hay citas pendientes</div>
-        )}
+)}
       </div>
     </div>
   );
 
+  const handleAprobarSolicitud = async (id) => {
+    if (!confirm('¿Aprobar el cambio de matrícula?')) return;
+    try {
+      await api.solicitudes.aprobar(id);
+      loadData();
+    } catch (err) {
+      alert('Error al aprobar solicitud');
+    }
+  };
+
+  const handleRechazarSolicitud = async (id) => {
+    if (!confirm('¿Rechazar la solicitud?')) return;
+    try {
+      await api.solicitudes.rechazar(id);
+      loadData();
+    } catch (err) {
+      alert('Error al rechazar solicitud');
+    }
+  };
+
+  const renderSolicitudes = () => {
+    const solicitudes = data.solicitudes || [];
+    if (solicitudes.length === 0) {
+      return (
+        <div style={styles.emptyState}>
+          <span style={styles.emptyIcon}>📋</span>
+          <p>No hay solicitudes de cambio de matrícula</p>
+        </div>
+      );
+    }
+    return (
+      <div>
+        <h2 style={styles.pageTitle}>Solicitudes de Cambio de Matrícula</h2>
+        <div style={styles.tableContainer}>
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}>CLIENTE</th>
+                <th style={styles.th}>VEHÍCULO</th>
+                <th style={styles.th}>MATRÍCULA ANTERIOR</th>
+                <th style={styles.th}>MATRÍCULA NUEVA</th>
+                <th style={styles.th}>FECHA</th>
+                <th style={styles.th}>ACCIONES</th>
+              </tr>
+            </thead>
+            <tbody>
+              {solicitudes.map(sol => (
+                <tr key={sol.id} style={styles.tr}>
+                  <td style={styles.td}>{sol.cliente_nombre}</td>
+                  <td style={styles.td}>{sol.marca} {sol.modelo}</td>
+                  <td style={styles.td}>{sol.matricula_anterior}</td>
+                  <td style={{...styles.td, color: '#10b981', fontWeight: 'bold'}}>{sol.matricula_nueva}</td>
+                  <td style={styles.td}>{new Date(sol.creado_en).toLocaleDateString('es-ES')}</td>
+                  <td style={styles.td}>
+                    <button onClick={() => handleAprobarSolicitud(sol.id)} style={{...styles.actionBtn, background: '#10b981'}}>✓ Aprobar</button>
+                    <button onClick={() => handleRechazarSolicitud(sol.id)} style={{...styles.actionBtn, background: '#ef4444', marginLeft: '8px'}}>✗ Rechazar</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  const getLabel = (tab) => {
+    const labels = { usuarios: 'Usuario', coches: 'Vehículo', citas: 'Cita', trabajos: 'Trabajo', inventario: 'Inventario', facturas: 'Factura', historial: 'Historial' };
+    return labels[tab] || tab;
+  };
+
   const renderTable = (tab) => {
-    const columns = getColumns(tab);
     const items = data[tab] || [];
-    const canDelete = (isAdmin || isMecanico) && ['usuarios', 'coches', 'citas', 'trabajos', 'inventario'].includes(tab);
-    const canCreate = (isAdmin || isMecanico || tab === 'coches' || tab === 'citas') && getFormFields().length > 0;
-    const canEdit = (isAdmin || isMecanico) && ['usuarios', 'coches', 'trabajos', 'inventario', 'citas'].includes(tab);
-    
-    const getLabel = (t) => {
-      const labels = { usuarios: 'Usuario', coches: 'Vehículo', citas: 'Cita', trabajos: 'Trabajo', inventario: 'Producto' };
-      return labels[t] || t;
-    };
+    const columns = getColumns(tab);
+    const canEdit = true;
+    const canDelete = ['usuarios', 'coches', 'citas', 'trabajos', 'inventario'].includes(tab);
 
     return (
       <div>
         <div style={styles.tableHeader}>
           <h2 style={styles.pageTitle}>{getLabel(tab)}s</h2>
-          {canCreate && (
+          {['usuarios', 'coches', 'citas', 'trabajos', 'inventario'].includes(tab) && (
             <button onClick={() => { setShowModal(true); setEditingItem(null); setFormData({}); }} style={styles.addBtn}>
               + Agregar {getLabel(tab)}
             </button>
@@ -449,9 +516,7 @@ const Dashboard = () => {
         <div style={styles.content}>
           {loading ? (
             <div style={styles.loading}>Cargando...</div>
-          ) : (
-            activeTab === 'dashboard' ? renderDashboard() : renderTable(activeTab)
-          )}
+          ) : activeTab === 'dashboard' ? renderDashboard() : activeTab === 'solicitudes' ? renderSolicitudes() : renderTable(activeTab)}
         </div>
       </main>
 
@@ -510,7 +575,11 @@ const styles = {
   input: { width: '100%', padding: '12px 16px', marginBottom: '12px', border: '1px solid #333', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box', background: '#1a1a2e', color: 'white' },
   modalActions: { display: 'flex', gap: '12px', marginTop: '20px' },
   saveBtn: { flex: 1, padding: '12px', background: '#e94560', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' },
-  cancelBtn: { flex: 1, padding: '12px', background: '#333', color: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }
+  cancelBtn: { flex: 1, padding: '12px', background: '#333', color: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' },
+  actionBtn: { padding: '8px 16px', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' },
+  emptyState: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px', color: '#666' },
+  emptyIcon: { fontSize: '48px', marginBottom: '16px' },
+  pageTitle: { fontSize: '24px', fontWeight: '700', color: 'white', marginBottom: '24px' }
 };
 
 export default Dashboard;
