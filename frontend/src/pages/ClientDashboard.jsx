@@ -177,13 +177,25 @@ const ClientDashboard = () => {
 
   const handleSaveCoche = async () => {
     try {
-      await api.coches.update(cocheToEdit.id, {
+      const updateData = {
         marca: editCocheData.marca,
         modelo: editCocheData.modelo,
         anio: parseInt(editCocheData.anio) || null,
         kilometraje: parseInt(editCocheData.kilometraje) || null,
         itv_vigencia: editCocheData.itv_vigencia || null
-      });
+      };
+
+      if (editCocheData.matricula !== cocheToEdit.matricula) {
+        await api.solicitudes.create({
+          coche_id: cocheToEdit.id,
+          cliente_id: user.id,
+          matricula_anterior: cocheToEdit.matricula,
+          matricula_nueva: editCocheData.matricula
+        });
+        alert('Solicitud de cambio de matrícula enviada. Un administrador debe aprobarla.');
+      }
+
+      await api.coches.update(cocheToEdit.id, updateData);
       setEditCocheModal(false);
       setCocheToEdit(null);
       setEditCocheData({});
