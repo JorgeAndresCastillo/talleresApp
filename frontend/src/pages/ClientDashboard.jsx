@@ -113,10 +113,13 @@ const ClientDashboard = () => {
   const loadData = async () => {
     setLoading(true);
     try {
+      console.log("loadData - user:", user);
       const [cochesRes, citasRes] = await Promise.all([
         api.coches.list(),
         api.citas.list()
       ]);
+      console.log("loadData - cochesRes:", cochesRes);
+      console.log("loadData - citasRes:", citasRes);
       setCoches(Array.isArray(cochesRes) ? cochesRes : []);
       setCitas(Array.isArray(citasRes) ? citasRes : []);
       

@@ -1,9 +1,13 @@
 const API_URL = 'http://localhost:3000';
 
-const getHeaders = () => ({
-  'Content-Type': 'application/json',
-  Authorization: `Bearer ${localStorage.getItem('token')}`
-});
+const getHeaders = () => {
+  const token = localStorage.getItem('token');
+  console.log("getHeaders - token:", token);
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`
+  };
+};
 
 export const api = {
   auth: {

@@ -5,11 +5,15 @@ const jwt = require("jsonwebtoken");
 
 const authenticate = (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
+  console.log("authenticate - token:", token);
   if (!token) return res.status(401).json({ msg: "Token requerido" });
   try {
-    req.user = jwt.verify(token, "TU_SECRETO_SUPER_SEGURO");
+    const decoded = jwt.verify(token, "TU_SECRETO_SUPER_SEGURO");
+    console.log("authenticate - decoded:", decoded);
+    req.user = decoded;
     next();
-  } catch {
+  } catch (err) {
+    console.log("authenticate - error:", err.message);
     res.status(401).json({ msg: "Token inválido" });
   }
 };
@@ -40,6 +44,7 @@ router.post("/", authenticate, async (req, res) => {
 
 router.get("/", authenticate, async (req, res) => {
   try {
+    console.log("GET /coches - user:", req.user);
     let query, params;
     if (req.user.rol === "admin") {
       query = "SELECT c.*, u.nombre as cliente_nombre FROM coches c JOIN usuarios u ON c.cliente_id = u.id";
@@ -51,7 +56,9 @@ router.get("/", authenticate, async (req, res) => {
       query = "SELECT * FROM coches WHERE cliente_id = $1";
       params = [req.user.id];
     }
+    console.log("Query:", query, "Params:", params);
     const result = await pool.query(query, params);
+    console.log("Result rows:", result.rows.length);
     res.json(result.rows);
   } catch (err) {
     console.error(err.message);
