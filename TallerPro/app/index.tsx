@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { api } from '../src/api';
+import { api, setToken } from '../src/api';
 
 interface Coche {
   id: number;
@@ -53,6 +53,7 @@ export default function HomeScreen() {
   };
 
   const handleLogout = async () => {
+    setToken(null);
     await AsyncStorage.removeItem('token');
     await AsyncStorage.removeItem('user');
     router.replace('/modal');

@@ -1,14 +1,15 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 const API_URL = 'http://172.20.10.2:3000';
 
-const getHeaders = async () => {
-  const token = await AsyncStorage.getItem('token');
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`
-  };
+let storedToken: string | null = null;
+
+export const setToken = (token: string | null) => {
+  storedToken = token;
 };
+
+export const getHeaders = () => ({
+  'Content-Type': 'application/json',
+  Authorization: `Bearer ${storedToken}`
+});
 
 export const api = {
   auth: {
@@ -26,37 +27,22 @@ export const api = {
       }).then(res => res.json())
   },
   coches: {
-    list: async () => {
-      const headers = await getHeaders();
-      return fetch(`${API_URL}/coches`, { headers }).then(res => res.json());
-    },
-    create: async (data: any) => {
-      const headers = await getHeaders();
-      return fetch(`${API_URL}/coches`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(data)
-      }).then(res => res.json());
-    }
+    list: () => fetch(`${API_URL}/coches`, { headers: getHeaders() }).then(res => res.json()),
+    create: (data: any) => fetch(`${API_URL}/coches`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    }).then(res => res.json())
   },
   citas: {
-    list: async () => {
-      const headers = await getHeaders();
-      return fetch(`${API_URL}/citas`, { headers }).then(res => res.json());
-    },
-    create: async (data: any) => {
-      const headers = await getHeaders();
-      return fetch(`${API_URL}/citas`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(data)
-      }).then(res => res.json());
-    }
+    list: () => fetch(`${API_URL}/citas`, { headers: getHeaders() }).then(res => res.json()),
+    create: (data: any) => fetch(`${API_URL}/citas`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    }).then(res => res.json())
   },
   trabajos: {
-    list: async () => {
-      const headers = await getHeaders();
-      return fetch(`${API_URL}/trabajos`, { headers }).then(res => res.json());
-    }
+    list: () => fetch(`${API_URL}/trabajos`, { headers: getHeaders() }).then(res => res.json())
   }
 };
