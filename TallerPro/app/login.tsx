@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'reac
 import { useRouter } from 'expo-router';
 import { api, setToken } from '../src/api';
 
-export default function ModalScreen() {
+export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const router = useRouter();
@@ -13,7 +13,7 @@ export default function ModalScreen() {
       const data = await api.auth.login({ email, contrasena: password });
       if (data.token) {
         setToken(data.token);
-        router.replace('/(tabs)');
+        router.replace('/');
       } else {
         Alert.alert('Error', data.msg || 'Error al iniciar sesión');
       }

@@ -53,7 +53,7 @@ export default function HomeScreen() {
 
   const handleLogout = () => {
     setToken(null);
-    router.replace('/modal');
+    router.replace('/login');
   };
 
   const renderCoche = ({ item }: { item: Coche }) => (
