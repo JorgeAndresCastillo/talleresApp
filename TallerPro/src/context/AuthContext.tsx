@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AsyncStorage } from 'react-native';
 
 interface User {
   id: number;
@@ -28,8 +28,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const loadStoredAuth = async () => {
     try {
-      const storedToken = await AsyncStorage.getItem('token');
-      const storedUser = await AsyncStorage.getItem('user');
+      const storedToken = await AsyncStorage.getItemAsync('token');
+      const storedUser = await AsyncStorage.getItemAsync('user');
       if (storedToken && storedUser) {
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
@@ -43,15 +43,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (userData: User, tokenData: string) => {
     setUser(userData);
     setToken(tokenData);
-    await AsyncStorage.setItem('token', tokenData);
-    await AsyncStorage.setItem('user', JSON.stringify(userData));
+    await AsyncStorage.setItemAsync('token', tokenData);
+    await AsyncStorage.setItemAsync('user', JSON.stringify(userData));
   };
 
   const logout = async () => {
     setUser(null);
     setToken(null);
-    await AsyncStorage.removeItem('token');
-    await AsyncStorage.removeItem('user');
+    await AsyncStorage.deleteItemAsync('token');
+    await AsyncStorage.deleteItemAsync('user');
   };
 
   return (

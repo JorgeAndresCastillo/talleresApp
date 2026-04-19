@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationIndependentTree } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { LoginScreen } from '../screens/LoginScreen';
@@ -15,16 +15,16 @@ export const AppNavigator = () => {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationIndependentTree>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!user ? (
           <Stack.Screen name="Login" component={LoginScreen} />
         ) : user.rol === 'admin' || user.rol === 'mecanico' ? (
           <Stack.Screen name="AdminDashboard" component={DashboardScreen} />
         ) : (
-          <Stack.Screen name="Dashboard" component={DashboardScreen} />
+          <Stack.Screen name="ClientDashboard" component={DashboardScreen} />
         )}
       </Stack.Navigator>
-    </NavigationContainer>
+    </NavigationIndependentTree>
   );
 };
