@@ -26,7 +26,7 @@ export const LoginScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>TallerPro</Text>
+      <Text style={styles.title}>Talleres Castillo</Text>
       <Text style={styles.subtitle}>Iniciar Sesión</Text>
       
       <TextInput
