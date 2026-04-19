@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { api } from '../src/api';
+import { api, setToken } from '../src/api';
 
 export default function ModalScreen() {
   const [email, setEmail] = useState('');
@@ -13,6 +13,7 @@ export default function ModalScreen() {
     try {
       const data = await api.auth.login({ email, contrasena: password });
       if (data.token) {
+        setToken(data.token);
         await AsyncStorage.setItem('token', data.token);
         await AsyncStorage.setItem('user', JSON.stringify({ id: data.id, email: data.email, rol: data.rol }));
         router.replace('/(tabs)');
