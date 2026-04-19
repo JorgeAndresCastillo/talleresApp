@@ -12,8 +12,14 @@ export default function LoginScreen() {
     try {
       const data = await api.auth.login({ email, contrasena: password });
       if (data.token) {
-        setToken(data.token);
-        router.replace('/');
+        const user = { id: data.id, email: data.email, rol: data.rol };
+        setToken(data.token, user);
+        // Redirect based on role
+        if (data.rol === 'cliente') {
+          router.replace('/');
+        } else {
+          router.replace('/');
+        }
       } else {
         Alert.alert('Error', data.msg || 'Error al iniciar sesión');
       }
