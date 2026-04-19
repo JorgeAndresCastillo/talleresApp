@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
-import { api, setToken } from '../src/api';
+import { api, setToken, getUser } from '../src/api';
 
 interface Coche {
   id: number;
@@ -21,21 +21,40 @@ interface Cita {
   matricula: string;
 }
 
-export default function HomeScreen() {
+interface Trabajo {
+  id: number;
+  descripcion: string;
+  estado: string;
+  matricula: string;
+  precio: number;
+}
+
+export default function DashboardScreen() {
   const router = useRouter();
+  const user = getUser();
+  const isAdmin = user?.rol === 'admin';
+  const isMecanico = user?.rol === 'mecanico';
+  
   const [coches, setCoches] = useState<Coche[]>([]);
   const [citas, setCitas] = useState<Cita[]>([]);
+  const [trabajos, setTrabajos] = useState<Trabajo[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [tab, setTab] = useState<'garage' | 'citas'>('garage');
+  const [tab, setTab] = useState<'garage' | 'citas' | 'trabajos'>('garage');
 
   const loadData = async () => {
     try {
-      const [cochesRes, citasRes] = await Promise.all([
-        api.coches.list(),
-        api.citas.list()
-      ]);
-      if (Array.isArray(cochesRes)) setCoches(cochesRes);
-      if (Array.isArray(citasRes)) setCitas(citasRes);
+      const promises = [api.coches.list(), api.citas.list()];
+      
+      // Load trabajos for mecanico/admin
+      if (isMecanico || isAdmin) {
+        promises.push(api.trabajos.list());
+      }
+      
+      const results = await Promise.all(promises);
+      
+      if (Array.isArray(results[0])) setCoches(results[0]);
+      if (Array.isArray(results[1])) setCitas(results[1]);
+      if (results[2] && Array.isArray(results[2])) setTrabajos(results[2]);
     } catch (e) {
       console.error(e);
     }
@@ -86,25 +105,58 @@ export default function HomeScreen() {
     );
   };
 
+  const renderTrabajo = ({ item }: { item: Trabajo }) => {
+    const estadoColor: Record<string, string> = {
+      pendiente: '#f59e0b',
+      en_proceso: '#3b82f6',
+      completada: '#10b981'
+    };
+    return (
+      <TouchableOpacity style={styles.card}>
+        <View style={styles.citaRow}>
+          <Text style={styles.matricula}>{item.matricula}</Text>
+          <Text style={styles.precio}>{item.precio}€</Text>
+        </View>
+        <Text style={styles.info}>{item.descripcion}</Text>
+        <View style={[styles.badge, { backgroundColor: estadoColor[item.estado] || '#64748b', marginTop: 4 }]}>
+          <Text style={styles.badgeText}>{item.estado}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const getTitle = () => {
+    if (isAdmin) return 'Talleres Castillo (Admin)';
+    if (isMecanico) return 'Talleres Castillo (Mecánico)';
+    return 'Talleres Castillo';
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Talleres Castillo</Text>
+        <Text style={styles.title}>{getTitle()}</Text>
         <TouchableOpacity onPress={handleLogout}>
-          <Text style={styles.logout}>Cerrar Sesión</Text>
+          <Text style={styles.logout}>Salir</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.tabs}>
-        <TouchableOpacity style={[styles.tab, tab === 'garage' && styles.tabActive]} onPress={() => setTab('garage')}>
-          <Text style={[styles.tabText, tab === 'garage' && styles.tabTextActive]}>Mi Garage</Text>
-        </TouchableOpacity>
+        {(!isMecanico && !isAdmin) && (
+          <TouchableOpacity style={[styles.tab, tab === 'garage' && styles.tabActive]} onPress={() => setTab('garage')}>
+            <Text style={[styles.tabText, tab === 'garage' && styles.tabTextActive]}>Mi Garage</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity style={[styles.tab, tab === 'citas' && styles.tabActive]} onPress={() => setTab('citas')}>
           <Text style={[styles.tabText, tab === 'citas' && styles.tabTextActive]}>Citas</Text>
         </TouchableOpacity>
+        {(isMecanico || isAdmin) && (
+          <TouchableOpacity style={[styles.tab, tab === 'trabajos' && styles.tabActive]} onPress={() => setTab('trabajos')}>
+            <Text style={[styles.tabText, tab === 'trabajos' && styles.tabTextActive]}>Trabajos</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      {tab === 'garage' ? (
+      {tab === 'garage' && !isMecanico && !isAdmin ? (
         <FlatList
           data={coches}
           keyExtractor={item => item.id.toString()}
@@ -113,14 +165,23 @@ export default function HomeScreen() {
           contentContainerStyle={styles.list}
           ListEmptyComponent={<Text style={styles.empty}>No tienes vehículos</Text>}
         />
-      ) : (
+      ) : tab === 'citas' ? (
         <FlatList
           data={citas}
           keyExtractor={item => item.id.toString()}
           renderItem={renderCita}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#e94560" />}
           contentContainerStyle={styles.list}
-          ListEmptyComponent={<Text style={styles.empty}>No tienes citas</Text>}
+          ListEmptyComponent={<Text style={styles.empty}>No hay citas</Text>}
+        />
+      ) : (
+        <FlatList
+          data={trabajos}
+          keyExtractor={item => item.id.toString()}
+          renderItem={renderTrabajo}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#e94560" />}
+          contentContainerStyle={styles.list}
+          ListEmptyComponent={<Text style={styles.empty}>No hay trabajos</Text>}
         />
       )}
     </View>
@@ -130,7 +191,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1a1a2e' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 50 },
-  title: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
+  title: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
   logout: { color: '#e94560', fontSize: 14 },
   tabs: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 10 },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
@@ -144,5 +205,6 @@ const styles = StyleSheet.create({
   empty: { color: '#666', textAlign: 'center', marginTop: 40 },
   citaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  badgeText: { color: '#fff', fontSize: 12, fontWeight: 'bold', textTransform: 'capitalize' }
+  badgeText: { color: '#fff', fontSize: 12, fontWeight: 'bold', textTransform: 'capitalize' },
+  precio: { color: '#10b981', fontSize: 18, fontWeight: 'bold' }
 });
