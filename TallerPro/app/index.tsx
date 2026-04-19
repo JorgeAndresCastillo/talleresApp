@@ -21,6 +21,14 @@ interface Cita {
   matricula: string;
 }
 
+interface Usuario {
+  id: number;
+  nombre: string;
+  email: string;
+  rol: string;
+  movil: string;
+}
+
 interface Trabajo {
   id: number;
   descripcion: string;
@@ -35,26 +43,46 @@ export default function DashboardScreen() {
   const isAdmin = user?.rol === 'admin';
   const isMecanico = user?.rol === 'mecanico';
   
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [coches, setCoches] = useState<Coche[]>([]);
   const [citas, setCitas] = useState<Cita[]>([]);
   const [trabajos, setTrabajos] = useState<Trabajo[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [tab, setTab] = useState<'garage' | 'citas' | 'trabajos'>('garage');
+  const [tab, setTab] = useState<'usuarios' | 'coches' | 'citas' | 'trabajos'>('usuarios');
 
   const loadData = async () => {
     try {
-      const promises = [api.coches.list(), api.citas.list()];
+      const promises = [];
       
-      // Load trabajos for mecanico/admin
-      if (isMecanico || isAdmin) {
+      // Admin sees everything
+      if (isAdmin) {
+        promises.push(api.usuarios.list());
+        promises.push(api.coches.list());
+        promises.push(api.citas.list());
         promises.push(api.trabajos.list());
+      } else if (isMecanico) {
+        promises.push(api.citas.list());
+        promises.push(api.trabajos.list());
+      } else {
+        promises.push(api.coches.list());
+        promises.push(api.citas.list());
       }
       
       const results = await Promise.all(promises);
       
-      if (Array.isArray(results[0])) setCoches(results[0]);
-      if (Array.isArray(results[1])) setCitas(results[1]);
-      if (results[2] && Array.isArray(results[2])) setTrabajos(results[2]);
+      let i = 0;
+      if (isAdmin) {
+        if (Array.isArray(results[i])) setUsuarios(results[i++]);
+        if (Array.isArray(results[i])) setCoches(results[i++]);
+        if (Array.isArray(results[i])) setCitas(results[i++]);
+        if (Array.isArray(results[i])) setTrabajos(results[i++]);
+      } else if (isMecanico) {
+        if (Array.isArray(results[i])) setCitas(results[i++]);
+        if (Array.isArray(results[i])) setTrabajos(results[i++]);
+      } else {
+        if (Array.isArray(results[i])) setCoches(results[i++]);
+        if (Array.isArray(results[i])) setCitas(results[i++]);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -105,6 +133,19 @@ export default function DashboardScreen() {
     );
   };
 
+  const renderUsuario = ({ item }: { item: Usuario }) => {
+    const rolColor: Record<string, string> = { admin: '#e94560', mecanico: '#3b82f6', cliente: '#10b981' };
+    return (
+      <View style={styles.card}>
+        <Text style={styles.matricula}>{item.nombre}</Text>
+        <Text style={styles.info}>{item.email}</Text>
+        <View style={[styles.badge, { backgroundColor: rolColor[item.rol] || '#64748b' }]}>
+          <Text style={styles.badgeText}>{item.rol}</Text>
+        </View>
+      </View>
+    );
+  };
+
   const renderTrabajo = ({ item }: { item: Trabajo }) => {
     const estadoColor: Record<string, string> = {
       pendiente: '#f59e0b',
@@ -126,9 +167,15 @@ export default function DashboardScreen() {
   };
 
   const getTitle = () => {
-    if (isAdmin) return 'Talleres Castillo (Admin)';
-    if (isMecanico) return 'Talleres Castillo (Mecánico)';
-    return 'Talleres Castillo';
+    if (isAdmin) return 'Admin - Talleres Castillo';
+    if (isMecanico) return 'Mecánico - Talleres Castillo';
+    return 'Mi Garage';
+  };
+
+  const getTabs = () => {
+    if (isAdmin) return ['usuarios', 'coches', 'citas', 'trabajos'];
+    if (isMecanico) return ['citas', 'trabajos'];
+    return ['garage'];
   };
 
   return (
@@ -141,29 +188,32 @@ export default function DashboardScreen() {
       </View>
 
       <View style={styles.tabs}>
-        {(!isMecanico && !isAdmin) && (
-          <TouchableOpacity style={[styles.tab, tab === 'garage' && styles.tabActive]} onPress={() => setTab('garage')}>
-            <Text style={[styles.tabText, tab === 'garage' && styles.tabTextActive]}>Mi Garage</Text>
+        {getTabs().map(t => (
+          <TouchableOpacity key={t} style={[styles.tab, tab === t && styles.tabActive]} onPress={() => setTab(t as any)}>
+            <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
+              {t === 'usuarios' ? 'Usuarios' : t === 'coches' ? 'Vehículos' : t === 'citas' ? 'Citas' : t}
+            </Text>
           </TouchableOpacity>
-        )}
-        <TouchableOpacity style={[styles.tab, tab === 'citas' && styles.tabActive]} onPress={() => setTab('citas')}>
-          <Text style={[styles.tabText, tab === 'citas' && styles.tabTextActive]}>Citas</Text>
-        </TouchableOpacity>
-        {(isMecanico || isAdmin) && (
-          <TouchableOpacity style={[styles.tab, tab === 'trabajos' && styles.tabActive]} onPress={() => setTab('trabajos')}>
-            <Text style={[styles.tabText, tab === 'trabajos' && styles.tabTextActive]}>Trabajos</Text>
-          </TouchableOpacity>
-        )}
+        ))}
       </View>
 
-      {tab === 'garage' && !isMecanico && !isAdmin ? (
+      {tab === 'usuarios' && isAdmin ? (
+        <FlatList
+          data={usuarios}
+          keyExtractor={item => item.id.toString()}
+          renderItem={renderUsuario}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#e94560" />}
+          contentContainerStyle={styles.list}
+          ListEmptyComponent={<Text style={styles.empty}>No hay usuarios</Text>}
+        />
+      ) : tab === 'coches' && isAdmin ? (
         <FlatList
           data={coches}
           keyExtractor={item => item.id.toString()}
           renderItem={renderCoche}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#e94560" />}
           contentContainerStyle={styles.list}
-          ListEmptyComponent={<Text style={styles.empty}>No tienes vehículos</Text>}
+          ListEmptyComponent={<Text style={styles.empty}>No hay vehículos</Text>}
         />
       ) : tab === 'citas' ? (
         <FlatList
@@ -174,7 +224,7 @@ export default function DashboardScreen() {
           contentContainerStyle={styles.list}
           ListEmptyComponent={<Text style={styles.empty}>No hay citas</Text>}
         />
-      ) : (
+      ) : tab === 'trabajos' && (isMecanico || isAdmin) ? (
         <FlatList
           data={trabajos}
           keyExtractor={item => item.id.toString()}
@@ -182,6 +232,15 @@ export default function DashboardScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#e94560" />}
           contentContainerStyle={styles.list}
           ListEmptyComponent={<Text style={styles.empty}>No hay trabajos</Text>}
+        />
+      ) : (
+        <FlatList
+          data={coches}
+          keyExtractor={item => item.id.toString()}
+          renderItem={renderCoche}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#e94560" />}
+          contentContainerStyle={styles.list}
+          ListEmptyComponent={<Text style={styles.empty}>No tienes vehículos</Text>}
         />
       )}
     </View>

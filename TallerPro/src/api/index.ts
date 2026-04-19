@@ -31,12 +31,24 @@ export const api = {
         body: JSON.stringify(data)
       }).then(res => res.json())
   },
+  usuarios: {
+    list: () => fetch(`${API_URL}/usuarios`, { headers: getHeaders() }).then(res => res.json()),
+    create: (data: any) => fetch(`${API_URL}/usuarios`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    }).then(res => res.json())
+  },
   coches: {
     list: () => fetch(`${API_URL}/coches`, { headers: getHeaders() }).then(res => res.json()),
     create: (data: any) => fetch(`${API_URL}/coches`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(data)
+    }).then(res => res.json()),
+    delete: (id: number) => fetch(`${API_URL}/coches/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
     }).then(res => res.json())
   },
   citas: {
@@ -45,6 +57,10 @@ export const api = {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(data)
+    }).then(res => res.json()),
+    delete: (id: number) => fetch(`${API_URL}/citas/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
     }).then(res => res.json())
   },
   trabajos: {
