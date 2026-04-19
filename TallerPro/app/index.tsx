@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { api, setToken } from '../src/api';
 
@@ -52,10 +51,8 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     setToken(null);
-    await AsyncStorage.removeItem('token');
-    await AsyncStorage.removeItem('user');
     router.replace('/modal');
   };
 
