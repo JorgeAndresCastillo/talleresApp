@@ -1,21 +1,20 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../api';
-import { useAuth } from '../context/AuthContext';
 
 export const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login } = useAuth();
-  const navigation = useNavigation<any>();
 
   const handleLogin = async () => {
     try {
       const data = await api.auth.login({ email, contrasena: password });
       if (data.token) {
-        await login({ id: data.id, email: data.email, rol: data.rol }, data.token);
-        navigation.replace(data.rol === 'cliente' ? 'Dashboard' : 'AdminDashboard');
+        await AsyncStorage.setItem('token', data.token);
+        await AsyncStorage.setItem('user', JSON.stringify({ id: data.id, email: data.email, rol: data.rol }));
+        router.replace(data.rol === 'cliente' ? '/(tabs)' : '/(tabs)');
       } else {
         Alert.alert('Error', data.msg || 'Error al iniciar sesión');
       }

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
-import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { api } from '../api';
+import { useRouter } from 'expo-router';
+import { api } from '../src/api';
 
 interface Coche {
   id: number;
@@ -22,7 +22,8 @@ interface Cita {
   matricula: string;
 }
 
-export const DashboardScreen = () => {
+export default function HomeScreen() {
+  const router = useRouter();
   const [coches, setCoches] = useState<Coche[]>([]);
   const [citas, setCitas] = useState<Cita[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -54,7 +55,7 @@ export const DashboardScreen = () => {
   const handleLogout = async () => {
     await AsyncStorage.removeItem('token');
     await AsyncStorage.removeItem('user');
-    router.replace('/');
+    router.replace('/modal');
   };
 
   const renderCoche = ({ item }: { item: Coche }) => (
@@ -126,7 +127,7 @@ export const DashboardScreen = () => {
       )}
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1a1a2e' },
