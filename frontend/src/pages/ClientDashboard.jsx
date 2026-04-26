@@ -345,15 +345,21 @@ const ClientDashboard = () => {
                 <div style={styles.carViewer}>
                   {selectedCoche ? (
                     <>
-                      <div style={styles.viewer3d}>
-                        <Canvas camera={{ position: [4, 2, 4] }}>
-                          <OrbitControls />
-                          <ambientLight intensity={0.5} />
-                          <directionalLight position={[10, 10, 5]} intensity={1} />
-                          <Car3DViewer color="#3b82f6" />
-                        </Canvas>
-                        <div style={styles.viewerHint}>Arrastra para rotar</div>
-                      </div>
+                      {selectedCoche.foto ? (
+                        <div style={styles.viewer3d}>
+                          <img src={selectedCoche.foto} alt={selectedCoche.matricula} style={styles.carPhotoViewer} />
+                        </div>
+                      ) : (
+                        <div style={styles.viewer3d}>
+                          <Canvas camera={{ position: [4, 2, 4] }}>
+                            <OrbitControls />
+                            <ambientLight intensity={0.5} />
+                            <directionalLight position={[10, 10, 5]} intensity={1} />
+                            <Car3DViewer color="#3b82f6" />
+                          </Canvas>
+                          <div style={styles.viewerHint}>Arrastra para rotar</div>
+                        </div>
+                      )}
 
                       <div style={styles.carDetails}>
                         <div style={styles.carTitleRow}>
@@ -816,6 +822,7 @@ const styles = {
   carModel: { color: '#888', fontSize: '14px' },
   carYear: { color: '#666', fontSize: '12px' },
   carViewer: { background: '#16213e', borderRadius: '12px', padding: '24px' },
+  carPhotoViewer: { width: '100%', height: '300px', objectFit: 'contain', borderRadius: '12px' },
   viewer3d: { background: '#1a1a2e', borderRadius: '12px', height: '300px', position: 'relative' },
   viewerHint: { position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)', color: '#666', fontSize: '13px', background: '#16213e', padding: '8px 16px', borderRadius: '20px' },
   carDetails: { marginTop: '24px' },
