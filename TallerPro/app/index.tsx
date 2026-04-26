@@ -22,7 +22,7 @@ export default function DashboardScreen() {
   const [trabajos, setTrabajos] = useState<Trabajo[]>([]);
   const [myJobs, setMyJobs] = useState<Trabajo[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [tab, setTab] = useState<'clientes' | 'citas' | 'trabajos' | 'taller'>('taller');
+  const [tab, setTab] = useState<'clientes' | 'mecanicos' | 'citas' | 'trabajos' | 'taller'>('clientes');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingClient, setEditingClient] = useState<Usuario | null>(null);
   const [newClient, setNewClient] = useState({ nombre: '', email: '', movil: '', contrasena: '' });
@@ -96,6 +96,14 @@ export default function DashboardScreen() {
     </TouchableOpacity>
   );
 
+  const renderMecanico = ({ item }: { item: Usuario }) => (
+    <View style={styles.clienteCard}>
+      <Text style={styles.clienteNombre}>{item.nombre}</Text>
+      <Text style={styles.clienteEmail}>{item.email}</Text>
+      <Text style={styles.clienteMovil}>📱 {item.movil}</Text>
+    </View>
+  );
+
   const renderDetalleCliente = () => {
     if (!selectedCliente || !detalleMode) return null;
     const clientCars = cochesTodos.filter(c => c.cliente_id === selectedCliente.id);
@@ -147,11 +155,13 @@ export default function DashboardScreen() {
       </View>
       <View style={styles.tabs}>
         {isAdmin && <TouchableOpacity style={styles.tab} onPress={() => setTab('clientes')}><Text style={styles.tabText}>Clientes</Text></TouchableOpacity>}
+        {isAdmin && <TouchableOpacity style={styles.tab} onPress={() => setTab('mecanicos')}><Text style={styles.tabText}>Mecánicos</Text></TouchableOpacity>}
         <TouchableOpacity style={styles.tab} onPress={() => setTab('citas')}><Text style={styles.tabText}>Citas</Text></TouchableOpacity>
         {isMecanico && <TouchableOpacity style={styles.tab} onPress={() => setTab('taller')}><Text style={styles.tabText}>Mi Taller</Text></TouchableOpacity>}
         {(isMecanico || isAdmin) && <TouchableOpacity style={styles.tab} onPress={() => setTab('trabajos')}><Text style={styles.tabText}>Trabajos</Text></TouchableOpacity>}
       </View>
       {tab === 'clientes' && isAdmin ? detalleMode ? renderDetalleCliente() : <FlatList data={usuarios.filter(u => u.rol === 'cliente')} keyExtractor={i => i.id.toString()} renderItem={renderCliente} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} ListEmptyComponent={<Text style={styles.empty}>Sin clientes</Text>} /> : 
+       tab === 'mecanicos' && isAdmin ? <FlatList data={usuarios.filter(u => u.rol === 'mecanico')} keyExtractor={i => i.id.toString()} renderItem={renderMecanico} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} ListEmptyComponent={<Text style={styles.empty}>Sin mecánicos</Text>} /> :
        tab === 'citas' ? <FlatList data={citas} keyExtractor={i => i.id.toString()} renderItem={renderCita} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} /> :
        tab === 'taller' && isMecanico ? <FlatList data={myJobs} keyExtractor={i => i.id.toString()} renderItem={renderMiTrabajo} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} ListEmptyComponent={<Text style={styles.empty}>Sin trabajos</Text>} /> :
        <FlatList data={trabajos} keyExtractor={i => i.id.toString()} renderItem={({ item }) => <View style={styles.card}><Text>{item.matricula}</Text></View>} contentContainerStyle={styles.list} />}
@@ -177,6 +187,7 @@ const styles = StyleSheet.create({
   clienteCard: { backgroundColor: '#16213e', padding: 16, marginBottom: 12, borderRadius: 12 },
   clienteNombre: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
   clienteEmail: { color: '#888' },
+  clienteMovil: { color: '#666', fontSize: 12, marginTop: 4 },
   detalleView: { flex: 1 },
   detalleActions: { flexDirection: 'row', justifyContent: 'space-between', padding: 20 },
   backText: { color: '#e94560', fontSize: 16 },
