@@ -141,7 +141,7 @@ export default function DashboardScreen() {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') { Alert.alert('Permiso de cámara necesario'); return; }
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['image'],
+      mediaTypes: 'images',
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.8,
