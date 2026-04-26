@@ -3,40 +3,10 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Scr
 import { useRouter } from 'expo-router';
 import { api, setToken, getUser } from '../src/api';
 
-interface Usuario {
-  id: number;
-  nombre: string;
-  email: string;
-  rol: string;
-  movil: string;
-}
-
-interface Coche {
-  id: number;
-  matricula: string;
-  marca: string;
-  modelo: string;
-  anio: number;
-  kilometraje: number;
-  cliente_id: number;
-}
-
-interface Cita {
-  id: number;
-  fecha: string;
-  hora: string;
-  estado: string;
-  descripcion: string;
-  matricula: string;
-}
-
-interface Trabajo {
-  id: number;
-  descripcion: string;
-  estado: string;
-  matricula: string;
-  precio: number;
-}
+interface Usuario { id: number; nombre: string; email: string; rol: string; movil: string; }
+interface Coche { id: number; matricula: string; marca: string; modelo: string; anio: number; kilometraje: number; cliente_id: number; }
+interface Cita { id: number; fecha: string; hora: string; estado: string; descripcion: string; matricula: string; }
+interface Trabajo { id: number; descripcion: string; estado: string; matricula: string; precio: number; }
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -50,41 +20,32 @@ export default function DashboardScreen() {
   const [cochesTodos, setCochesTodos] = useState<Coche[]>([]);
   const [citas, setCitas] = useState<Cita[]>([]);
   const [trabajos, setTrabajos] = useState<Trabajo[]>([]);
+  const [myJobs, setMyJobs] = useState<Trabajo[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [tab, setTab] = useState<'clientes' | 'citas' | 'trabajos'>('clientes');
+  const [tab, setTab] = useState<'clientes' | 'citas' | 'trabajos' | 'taller'>('taller');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingClient, setEditingClient] = useState<Usuario | null>(null);
-  const [editData, setEditData] = useState({ nombre: '', email: '', movil: '' });
   const [newClient, setNewClient] = useState({ nombre: '', email: '', movil: '', contrasena: '' });
+  const [editData, setEditData] = useState({ nombre: '', email: '', movil: '' });
 
   const loadData = async () => {
     try {
       const promises = [];
       if (isAdmin) {
-        promises.push(api.usuarios.list());
-        promises.push(api.coches.list());
-        promises.push(api.citas.list());
-        promises.push(api.trabajos.list());
+        promises.push(api.usuarios.list(), api.coches.list(), api.citas.list(), api.trabajos.list());
       } else if (isMecanico) {
-        promises.push(api.citas.list());
-        promises.push(api.trabajos.list());
+        promises.push(api.trabajos.misTrabajos(), api.citas.list());
       } else {
-        promises.push(api.coches.list());
-        promises.push(api.citas.list());
+        promises.push(api.coches.list(), api.citas.list());
       }
       const results = await Promise.all(promises);
       let i = 0;
       if (isAdmin) {
-        if (Array.isArray(results[i])) setUsuarios(results[i++]);
-        if (Array.isArray(results[i])) setCochesTodos(results[i++]);
-        if (Array.isArray(results[i])) setCitas(results[i++]);
-        if (Array.isArray(results[i])) setTrabajos(results[i++]);
+        setUsuarios(results[i]); setCochesTodos(results[++i]); setCitas(results[++i]); setTrabajos(results[++i]);
       } else if (isMecanico) {
-        if (Array.isArray(results[i])) setCitas(results[i++]);
-        if (Array.isArray(results[i])) setTrabajos(results[i++]);
+        setMyJobs(results[i]); setCitas(results[++i]);
       } else {
-        if (Array.isArray(results[i])) setCochesTodos(results[i++]);
-        if (Array.isArray(results[i])) setCitas(results[i++]);
+        setCochesTodos(results[i]); setCitas(results[++i]);
       }
     } catch (e) { console.error(e); }
   };
@@ -92,120 +53,88 @@ export default function DashboardScreen() {
   useEffect(() => { loadData(); }, []);
   const onRefresh = async () => { setRefreshing(true); await loadData(); setRefreshing(false); };
 
-  const handleLogout = () => { setToken(null); router.replace('/login'); };
-
   const handleAddClient = async () => {
-    if (!newClient.nombre || !newClient.email || !newClient.movil || !newClient.contrasena) {
-      Alert.alert('Todos los campos son obligatorios'); return;
-    }
+    if (!newClient.nombre || !newClient.email || !newClient.movil || !newClient.contrasena) { Alert.alert('Todos los campos son obligatorios'); return; }
     try {
-      const result = await api.usuarios.create({
-        nombre: newClient.nombre, email: newClient.email,
-        movil: newClient.movil, contrasena: newClient.contrasena, rol: 'cliente'
-      });
-      if (result.id) {
-        setShowAddModal(false);
-        setNewClient({ nombre: '', email: '', movil: '', contrasena: '' });
-        loadData();
-        Alert.alert('Cliente creado');
-      } else { Alert.alert(result.msg || 'Error al crear'); }
+      const result = await api.usuarios.create({ nombre: newClient.nombre, email: newClient.email, movil: newClient.movil, contrasena: newClient.contrasena, rol: 'cliente' });
+      if (result.id) { setShowAddModal(false); setNewClient({ nombre: '', email: '', movil: '', contrasena: '' }); loadData(); Alert.alert('Cliente creado'); }
+      else { Alert.alert(result.msg || 'Error al crear'); }
     } catch (e) { Alert.alert('Error de conexión'); }
   };
 
   const handleEditClient = async () => {
-    if (!editData.nombre || !editData.email || !editData.movil) {
-      Alert.alert('Todos los campos son obligatorios'); return;
-    }
+    if (!editData.nombre || !editData.email || !editData.movil) { Alert.alert('Todos los campos son obligatorios'); return; }
     try {
       const result = await api.usuarios.update(editingClient!.id, editData);
-      if (result.id) {
-        setEditingClient(null);
-        loadData();
-        Alert.alert('Cliente actualizado');
-      } else { Alert.alert(result.msg || 'Error al actualizar'); }
+      if (result.id) { setEditingClient(null); loadData(); Alert.alert('Cliente actualizado'); }
+      else { Alert.alert(result.msg || 'Error al actualizar'); }
     } catch (e) { Alert.alert('Error de conexión'); }
   };
 
-  const openEditCliente = (cliente: Usuario) => {
-    setEditingClient(cliente);
-    setEditData({ nombre: cliente.nombre, email: cliente.email, movil: cliente.movil });
+  const handleIniciarTrabajo = async (id: number) => {
+    try {
+      const result = await api.trabajos.iniciar(id);
+      if (result.id) { loadData(); Alert.alert('Trabajo iniciado'); }
+      else { Alert.alert(result.msg || 'Error'); }
+    } catch (e) { Alert.alert('Error de conexión'); }
   };
 
-  const openClienteDetalle = (cliente: Usuario) => { setSelectedCliente(cliente); setDetalleMode(true); };
+  const handleCompletarTrabajo = async (id: number) => {
+    try {
+      const result = await api.trabajos.completar(id, {});
+      if (result.id) { loadData(); Alert.alert('Trabajo completado'); }
+      else { Alert.alert(result.msg || 'Error'); }
+    } catch (e) { Alert.alert('Error de conexión'); }
+  };
+
+  const openEditCliente = (cliente: Usuario) => { setEditingClient(cliente); setEditData({ nombre: cliente.nombre, email: cliente.email, movil: cliente.movil }); };
 
   const renderCliente = ({ item }: { item: Usuario }) => (
-    <TouchableOpacity style={styles.clienteCard} onPress={() => openClienteDetalle(item)}>
+    <TouchableOpacity style={styles.clienteCard} onPress={() => { setSelectedCliente(item); setDetalleMode(true); }}>
       <Text style={styles.clienteNombre}>{item.nombre}</Text>
       <Text style={styles.clienteEmail}>{item.email}</Text>
-      <Text style={styles.clienteMovil}>📱 {item.movil}</Text>
     </TouchableOpacity>
   );
 
   const renderDetalleCliente = () => {
     if (!selectedCliente || !detalleMode) return null;
     const clientCars = cochesTodos.filter(c => c.cliente_id === selectedCliente.id);
-    const panResponder = PanResponder.create({
-      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 10,
-      onPanResponderMove: (_, g) => { if (g.dx > 50) setDetalleMode(false); }
-    });
+    const panResponder = PanResponder.create({ onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 10, onPanResponderMove: (_, g) => { if (g.dx > 50) setDetalleMode(false); } });
     return (
       <ScrollView style={styles.detalleView} {...panResponder.panHandlers}>
         <View style={styles.detalleActions}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => setDetalleMode(false)}>
-            <Text style={styles.backText}>← Volver</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.editBtn} onPress={() => openEditCliente(selectedCliente)}>
-            <Text style={styles.editBtnText}>✏️ Editar</Text>
-          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setDetalleMode(false)}><Text style={styles.backText}>← Volver</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.editBtn} onPress={() => openEditCliente(selectedCliente)}><Text style={styles.editBtnText}>✏️</Text></TouchableOpacity>
         </View>
         <View style={styles.detalleHeader}>
           <Text style={styles.detalleNombre}>{selectedCliente.nombre}</Text>
           <Text style={styles.detalleEmail}>{selectedCliente.email}</Text>
-          <Text style={styles.detalleMovil}>📱 {selectedCliente.movil}</Text>
         </View>
         <Text style={styles.detalleSubtitle}>Vehículos ({clientCars.length})</Text>
-        {clientCars.length > 0 ? clientCars.map(c => (
-          <View key={c.id} style={styles.detalleCoche}>
-            <Text style={styles.detalleMatricula}>{c.matricula}</Text>
-            <Text style={styles.detalleModelo}>{c.marca} {c.modelo}</Text>
-            <Text style={styles.detalleAno}>{c.anio} · {c.kilometraje?.toLocaleString()} km</Text>
-          </View>
-        )) : <Text style={styles.empty}>Sin vehículos</Text>}
+        {clientCars.map(c => <View key={c.id} style={styles.detalleCoche}><Text style={styles.detalleMatricula}>{c.matricula}</Text><Text style={styles.detalleModelo}>{c.marca} {c.modelo}</Text></View>)}
       </ScrollView>
     );
   };
 
-const renderCita = ({ item }: { item: Cita }) => {
+  const renderCita = ({ item }: { item: Cita }) => {
     const ec: Record<string, string> = { pendiente: '#f59e0b', aceptado: '#10b981', rechazado: '#ef4444', en_proceso: '#3b82f6', completada: '#6366f1' };
+    return <View style={styles.card}><Text style={styles.matricula}>{item.matricula}</Text><Text style={styles.info}>{item.fecha}</Text></View>;
+  };
+
+  const renderMiTrabajo = ({ item }: { item: Trabajo }) => {
+    const ec: Record<string, string> = { pendiente: '#f59e0b', en_proceso: '#3b82f6', completada: '#10b981' };
     return (
-      <View style={styles.card}>
-        <View style={styles.citaRow}>
-          <Text style={styles.matricula}>{item.matricula}</Text>
-          <View style={[styles.badge, { backgroundColor: ec[item.estado] || '#64748b' }]}><Text style={styles.badgeText}>{item.estado}</Text></View>
-        </View>
-        <Text style={styles.info}>{item.fecha} a las {item.hora}</Text>
+      <View style={styles.miTrabajoCard}>
+        <View><Text style={styles.miTrabajoMatricula}>{item.matricula}</Text><Text style={styles.precio}>{item.precio}€</Text></View>
         <Text style={styles.info}>{item.descripcion}</Text>
+        <View style={[styles.badge, { backgroundColor: ec[item.estado] }]}><Text style={styles.badgeText}>{item.estado}</Text></View>
+        {item.estado === 'pendiente' && <TouchableOpacity style={styles.iniciarBtn} onPress={() => handleIniciarTrabajo(item.id)}><Text style={styles.btnText}>▶ Iniciar</Text></TouchableOpacity>}
+        {item.estado === 'en_proceso' && <TouchableOpacity style={styles.completarBtn} onPress={() => handleCompletarTrabajo(item.id)}><Text style={styles.btnText}>✓ Completar</Text></TouchableOpacity>}
       </View>
     );
   };
 
-  const renderTrabajo = ({ item }: { item: Trabajo }) => {
-    const ec: Record<string, string> = { pendiente: '#f59e0b', en_proceso: '#3b82f6', completada: '#10b981' };
-    return (
-      <TouchableOpacity style={styles.card}>
-        <View style={styles.citaRow}>
-          <Text style={styles.matricula}>{item.matricula}</Text>
-          <Text style={styles.precio}>{item.precio}€</Text>
-        </View>
-        <Text style={styles.info}>{item.descripcion}</Text>
-        <View style={[styles.badge, { backgroundColor: ec[item.estado] || '#64748b', marginTop: 4 }]}>
-          <Text style={styles.badgeText}>{item.estado}</Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  const getTitle = () => isAdmin ? 'Admin - Talleres Castillo' : isMecanico ? 'Mecánico - Talleres Castillo' : 'Mi Garage';
+  const getTitle = () => isAdmin ? 'Admin' : isMecanico ? 'Mecánico' : 'Mi Garage';
 
   return (
     <View style={styles.container}>
@@ -213,102 +142,63 @@ const renderCita = ({ item }: { item: Cita }) => {
         <Text style={styles.title}>{getTitle()}</Text>
         <View style={styles.headerRight}>
           {tab === 'clientes' && isAdmin && <TouchableOpacity onPress={() => setShowAddModal(true)}><Text style={styles.addBtn}>+</Text></TouchableOpacity>}
-          <TouchableOpacity onPress={handleLogout}><Text style={styles.logout}>Salir</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => { setToken(null); router.replace('/login'); }}><Text style={styles.logout}>Salir</Text></TouchableOpacity>
         </View>
       </View>
       <View style={styles.tabs}>
-        {isAdmin && <TouchableOpacity style={[styles.tab, tab === 'clientes' && styles.tabActive]} onPress={() => setTab('clientes')}><Text style={[styles.tabText, tab === 'clientes' && styles.tabTextActive]}>Clientes</Text></TouchableOpacity>}
-        <TouchableOpacity style={[styles.tab, tab === 'citas' && styles.tabActive]} onPress={() => setTab('citas')}><Text style={[styles.tabText, tab === 'citas' && styles.tabTextActive]}>Citas</Text></TouchableOpacity>
-        {(isMecanico || isAdmin) && <TouchableOpacity style={[styles.tab, tab === 'trabajos' && styles.tabActive]} onPress={() => setTab('trabajos')}><Text style={[styles.tabText, tab === 'trabajos' && styles.tabTextActive]}>Trabajos</Text></TouchableOpacity>}
+        {isAdmin && <TouchableOpacity style={styles.tab} onPress={() => setTab('clientes')}><Text style={styles.tabText}>Clientes</Text></TouchableOpacity>}
+        <TouchableOpacity style={styles.tab} onPress={() => setTab('citas')}><Text style={styles.tabText}>Citas</Text></TouchableOpacity>
+        {isMecanico && <TouchableOpacity style={styles.tab} onPress={() => setTab('taller')}><Text style={styles.tabText}>Mi Taller</Text></TouchableOpacity>}
+        {(isMecanico || isAdmin) && <TouchableOpacity style={styles.tab} onPress={() => setTab('trabajos')}><Text style={styles.tabText}>Trabajos</Text></TouchableOpacity>}
       </View>
-      {tab === 'clientes' && isAdmin ? detalleMode ? renderDetalleCliente() : (
-        <FlatList data={usuarios.filter(u => u.rol === 'cliente')} keyExtractor={i => i.id.toString()} renderItem={renderCliente} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#e94560" />} ListEmptyComponent={<Text style={styles.empty}>No hay clientes</Text>} />
-      ) : tab === 'citas' ? (
-        <FlatList data={citas} keyExtractor={i => i.id.toString()} renderItem={renderCita} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#e94560" />} ListEmptyComponent={<Text style={styles.empty}>No hay citas</Text>} />
-      ) : (
-        <FlatList data={trabajos} keyExtractor={i => i.id.toString()} renderItem={renderTrabajo} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#e94560" />} ListEmptyComponent={<Text style={styles.empty}>No hay trabajos</Text>} />
-      )}
-      {showAddModal && (
-        <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <Text style={styles.modalTitle}>Nuevo Cliente</Text>
-            <TextInput style={styles.modalInput} placeholder="Nombre" value={newClient.nombre} onChangeText={t => setNewClient({...newClient, nombre: t})} />
-            <TextInput style={styles.modalInput} placeholder="Email" value={newClient.email} onChangeText={t => setNewClient({...newClient, email: t})} keyboardType="email-address" />
-            <TextInput style={styles.modalInput} placeholder="Móvil" value={newClient.movil} onChangeText={t => setNewClient({...newClient, movil: t})} keyboardType="phone-pad" />
-            <TextInput style={styles.modalInput} placeholder="Contraseña" value={newClient.contrasena} onChangeText={t => setNewClient({...newClient, contrasena: t})} secureTextEntry />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.modalBtn} onPress={handleAddClient}><Text style={styles.modalBtnText}>Crear</Text></TouchableOpacity>
-              <TouchableOpacity style={[styles.modalBtn, styles.modalBtnCancel]} onPress={() => setShowAddModal(false)}><Text style={styles.modalBtnTextCancel}>Cancelar</Text></TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      )}
-
-      {editingClient && (
-        <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <Text style={styles.modalTitle}>Editar Cliente</Text>
-            <TextInput style={styles.modalInput} placeholder="Nombre" value={editData.nombre} onChangeText={t => setEditData({...editData, nombre: t})} />
-            <TextInput style={styles.modalInput} placeholder="Email" value={editData.email} onChangeText={t => setEditData({...editData, email: t})} keyboardType="email-address" />
-            <TextInput style={styles.modalInput} placeholder="Móvil" value={editData.movil} onChangeText={t => setEditData({...editData, movil: t})} keyboardType="phone-pad" />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.modalBtn} onPress={handleEditClient}><Text style={styles.modalBtnText}>Guardar</Text></TouchableOpacity>
-              <TouchableOpacity style={[styles.modalBtn, styles.modalBtnCancel]} onPress={() => setEditingClient(null)}><Text style={styles.modalBtnTextCancel}>Cancelar</Text></TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      )}
+      {tab === 'clientes' && isAdmin ? detalleMode ? renderDetalleCliente() : <FlatList data={usuarios.filter(u => u.rol === 'cliente')} keyExtractor={i => i.id.toString()} renderItem={renderCliente} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} ListEmptyComponent={<Text style={styles.empty}>Sin clientes</Text>} /> : 
+       tab === 'citas' ? <FlatList data={citas} keyExtractor={i => i.id.toString()} renderItem={renderCita} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} /> :
+       tab === 'taller' && isMecanico ? <FlatList data={myJobs} keyExtractor={i => i.id.toString()} renderItem={renderMiTrabajo} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} ListEmptyComponent={<Text style={styles.empty}>Sin trabajos</Text>} /> :
+       <FlatList data={trabajos} keyExtractor={i => i.id.toString()} renderItem={({ item }) => <View style={styles.card}><Text>{item.matricula}</Text></View>} contentContainerStyle={styles.list} />}
+      {showAddModal && <View style={styles.modalOverlay}><View style={styles.modal}><Text>Nuevo Cliente</Text><TextInput placeholder="Nombre" onChangeText={t => setNewClient({...newClient, nombre: t})} /><TextInput placeholder="Email" onChangeText={t => setNewClient({...newClient, email: t})} /><TextInput placeholder="Móvil" onChangeText={t => setNewClient({...newClient, movil: t})} /><TextInput placeholder="Contraseña" onChangeText={t => setNewClient({...newClient, contrasena: t})} secureTextEntry /><TouchableOpacity onPress={handleAddClient}><Text>Crear</Text></TouchableOpacity><TouchableOpacity onPress={() => setShowAddModal(false)}><Text>Cancelar</Text></TouchableOpacity></View></View>}
+      {editingClient && <View style={styles.modalOverlay}><View style={styles.modal}><Text>Editar</Text><TextInput value={editData.nombre} onChangeText={t => setEditData({...editData, nombre: t})} /><TextInput value={editData.email} onChangeText={t => setEditData({...editData, email: t})} /><TextInput value={editData.movil} onChangeText={t => setEditData({...editData, movil: t})} /><TouchableOpacity onPress={handleEditClient}><Text>Guardar</Text></TouchableOpacity><TouchableOpacity onPress={() => setEditingClient(null)}><Text>Cancelar</Text></TouchableOpacity></View></View>}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1a1a2e' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 50 },
-  title: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
-  logout: { color: '#e94560', fontSize: 14 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 15 },
-  addBtn: { color: '#10b981', fontSize: 24, fontWeight: 'bold' },
+  container: { flex: 1, backgroundColor: '#1a1a2e', paddingTop: 50 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', padding: 20 },
+  title: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
+  headerRight: { flexDirection: 'row', gap: 15 },
+  addBtn: { color: '#10b981', fontSize: 24 },
+  logout: { color: '#e94560' },
   tabs: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 10 },
-  tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabActive: { borderBottomColor: '#e94560' },
-  tabText: { color: '#888', fontSize: 16 },
-  tabTextActive: { color: '#e94560', fontWeight: 'bold' },
+  tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
+  tabText: { color: '#888', fontSize: 14 },
   list: { padding: 20 },
-  card: { backgroundColor: '#16213e', padding: 16, borderRadius: 12, marginBottom: 12 },
-  matricula: { fontSize: 18, fontWeight: 'bold', color: '#0ab1e6', marginBottom: 4 },
-  info: { color: '#888', fontSize: 14 },
+  card: { backgroundColor: '#16213e', padding: 16, marginBottom: 12, borderRadius: 12 },
   empty: { color: '#666', textAlign: 'center', marginTop: 40 },
-  citaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  badgeText: { color: '#fff', fontSize: 12, fontWeight: 'bold', textTransform: 'capitalize' },
-  precio: { color: '#10b981', fontSize: 18, fontWeight: 'bold' },
   clienteCard: { backgroundColor: '#16213e', padding: 16, marginBottom: 12, borderRadius: 12 },
   clienteNombre: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
-  clienteEmail: { color: '#888', fontSize: 14 },
-  clienteMovil: { color: '#666', fontSize: 12 },
-  detalleView: { flex: 1, backgroundColor: '#1a1a2e' },
-  detalleActions: { flexDirection: 'row', justifyContent: 'space-between', padding: 20, paddingTop: 10 },
-  backBtn: { paddingRight: 15 },
+  clienteEmail: { color: '#888' },
+  detalleView: { flex: 1 },
+  detalleActions: { flexDirection: 'row', justifyContent: 'space-between', padding: 20 },
   backText: { color: '#e94560', fontSize: 16 },
-  editBtn: { backgroundColor: '#3b82f6', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
-  editBtnText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
-  detalleHeader: { padding: 20, paddingTop: 0 },
-  detalleNombre: { fontSize: 24, fontWeight: 'bold', color: '#fff', marginBottom: 8 },
-  detalleEmail: { color: '#888', fontSize: 16, marginBottom: 4 },
-  detalleMovil: { color: '#666', fontSize: 14 },
-  detalleSubtitle: { fontSize: 18, fontWeight: 'bold', color: '#e94560', marginTop: 30, paddingHorizontal: 20, marginBottom: 15 },
-  detalleCoche: { backgroundColor: '#16213e', marginHorizontal: 20, marginBottom: 12, padding: 16, borderRadius: 12 },
-  detalleMatricula: { fontSize: 18, fontWeight: 'bold', color: '#0ab1e6', marginBottom: 4 },
-  detalleModelo: { color: '#ccc', fontSize: 15 },
-  detalleAno: { color: '#666', fontSize: 13 },
+  editBtn: { backgroundColor: '#3b82f6', padding: 8, borderRadius: 8 },
+  editBtnText: { color: '#fff' },
+  detalleHeader: { padding: 20 },
+  detalleNombre: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
+  detalleEmail: { color: '#888' },
+  detalleSubtitle: { fontSize: 18, fontWeight: 'bold', color: '#e94560', margin: 20 },
+  detalleMatricula: { fontSize: 18, fontWeight: 'bold', color: '#0ab1e6' },
+  detalleModelo: { color: '#ccc' },
+  detalleCoche: { backgroundColor: '#16213e', margin: 20, marginTop: 0, padding: 16, borderRadius: 12 },
+  matricula: { fontSize: 18, fontWeight: 'bold', color: '#0ab1e6' },
+  precio: { fontSize: 18, fontWeight: 'bold', color: '#10b981' },
+  info: { color: '#888', marginTop: 4 },
+  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginTop: 8 },
+  badgeText: { color: '#fff', fontSize: 12 },
+  miTrabajoCard: { backgroundColor: '#16213e', padding: 16, marginBottom: 12, borderRadius: 12 },
+  miTrabajoMatricula: { fontSize: 20, fontWeight: 'bold', color: '#0ab1e6' },
+  iniciarBtn: { backgroundColor: '#3b82f6', padding: 12, borderRadius: 8, marginTop: 12, alignItems: 'center' },
+  completarBtn: { backgroundColor: '#10b981', padding: 12, borderRadius: 8, marginTop: 12, alignItems: 'center' },
+  btnText: { color: '#fff', fontWeight: 'bold' },
   modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' },
-  modal: { backgroundColor: '#16213e', padding: 24, borderRadius: 16, width: '85%', maxWidth: 350 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginBottom: 20, textAlign: 'center' },
-  modalInput: { backgroundColor: '#1a1a2e', color: '#fff', padding: 14, borderRadius: 8, marginBottom: 12, fontSize: 15 },
-  modalButtons: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  modalBtn: { flex: 1, backgroundColor: '#e94560', padding: 14, borderRadius: 8, alignItems: 'center' },
-  modalBtnCancel: { backgroundColor: '#333' },
-  modalBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  modalBtnTextCancel: { color: '#ccc', fontSize: 16 }
+  modal: { backgroundColor: '#16213e', padding: 24, borderRadius: 16, width: '85%' }
 });
