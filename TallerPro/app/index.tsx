@@ -45,9 +45,10 @@ export default function DashboardScreen() {
   const isMecanico = user?.rol === 'mecanico';
   
   const [selectedCliente, setSelectedCliente] = useState<Usuario | null>(null);
+  const [detalleMode, setDetalleMode] = useState(false);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [cochesTodos, setCochesTodos] = useState<Coche[]>([]);
-  const [clienteCoches, setClienteCoches] = useState<Coche[]>([]);
+  const [seleccionarMostrar, setSeleccionarMostrar] = useState<number | null>(null);
   const [citas, setCitas] = useState<Cita[]>([]);
   const [trabajos, setTrabajos] = useState<Trabajo[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -105,34 +106,55 @@ export default function DashboardScreen() {
     router.replace('/login');
   };
 
-  const selectCliente = (cliente: Usuario) => {
+const selectCliente = (cliente: Usuario) => {
     setSelectedCliente(cliente);
-    // Filter cars belonging to this client
-    const filtered = cochesTodos.filter(c => c.cliente_id === cliente.id);
-    setClienteCoches(filtered);
   };
 
-  const renderCliente = ({ item }: { item: Usuario }) => {
-    const isSelected = selectedCliente?.id === item.id;
+  const openClienteDetalle = (cliente: Usuario) => {
+    setSelectedCliente(cliente);
+    setDetalleMode(true);
+  };
+
+  const renderCliente = ({ item }: { item: Usuario }) => (
+    <TouchableOpacity 
+      style={styles.clienteCard}
+      onPress={() => openClienteDetalle(item)}
+    >
+      <Text style={styles.clienteNombre}>{item.nombre}</Text>
+      <Text style={styles.clienteEmail}>{item.email}</Text>
+      <Text style={styles.clienteMovil}>📱 {item.movil}</Text>
+    </TouchableOpacity>
+  );
+
+const renderDetalleCliente = () => {
+    if (!selectedCliente || !detalleMode) return null;
+    const clientCars = cochesTodos.filter(c => c.cliente_id === selectedCliente.id);
     return (
-      <TouchableOpacity 
-        style={[styles.clienteCard, isSelected && styles.clienteCardSelected]}
-        onPress={() => selectCliente(item)}
-      >
-        <Text style={styles.clienteNombre}>{item.nombre}</Text>
-        <Text style={styles.clienteEmail}>{item.email}</Text>
-        <Text style={styles.clienteMovil}>{item.movil}</Text>
-      </TouchableOpacity>
+      <ScrollView style={styles.detalleView}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => setDetalleMode(false)}>
+          <Text style={styles.backText}>← Volver</Text>
+        </TouchableOpacity>
+        <View style={styles.detalleHeader}>
+          <Text style={styles.detalleNombre}>{selectedCliente.nombre}</Text>
+          <Text style={styles.detalleEmail}>{selectedCliente.email}</Text>
+          <Text style={styles.detalleMovil}>📱 {selectedCliente.movil}</Text>
+        </View>
+        
+        <Text style={styles.detalleSubtitle}>Vehículos ({clientCars.length})</Text>
+        {clientCars.length > 0 ? (
+          clientCars.map(coche => (
+            <View key={coche.id} style={styles.detalleCoche}>
+              <Text style={styles.detalleMatricula}>{coche.matricula}</Text>
+              <Text style={styles.detalleModelo}>{coche.marca} {coche.modelo}</Text>
+              <Text style={styles.detalleAno}>{coche.anio} · {coche.kilometraje?.toLocaleString()} km</Text>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.empty}>Sin vehículos</Text>
+        )}
+      </ScrollView>
     );
   };
-
-  const renderCocheDelCliente = ({ item }: { item: Coche }) => (
-    <View style={styles.cocheCard}>
-      <Text style={styles.matricula}>{item.matricula}</Text>
-      <Text style={styles.info}>{item.marca} {item.modelo}</Text>
-      <Text style={styles.info}>{item.anio} · {item.kilometraje?.toLocaleString()} km</Text>
-    </View>
-  );
 
   const renderCita = ({ item }: { item: Cita }) => {
     const estadoColor: Record<string, string> = {
@@ -208,28 +230,16 @@ export default function DashboardScreen() {
       </View>
 
       {tab === 'clientes' && isAdmin ? (
-        <View style={styles.splitView}>
+        detalleMode ? renderDetalleCliente() : (
           <FlatList
             data={usuarios.filter(u => u.rol === 'cliente')}
             keyExtractor={item => item.id.toString()}
             renderItem={renderCliente}
-            style={styles.clienteList}
+            contentContainerStyle={styles.list}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#e94560" />}
             ListEmptyComponent={<Text style={styles.empty}>No hay clientes</Text>}
           />
-          {selectedCliente && (
-            <View style={styles.cocheList}>
-              <Text style={styles.subtitle}>
-                Coches de {selectedCliente.nombre}
-              </Text>
-              <FlatList
-                data={clienteCoches}
-                keyExtractor={item => item.id.toString()}
-                renderItem={renderCocheDelCliente}
-                ListEmptyComponent={<Text style={styles.empty}>Sin coches</Text>}
-              />
-            </View>
-          )}
-        </View>
+        )
       ) : tab === 'citas' ? (
         <FlatList
           data={citas}
@@ -282,5 +292,17 @@ const styles = StyleSheet.create({
   subList: { padding: 20 },
   subtitle: { fontSize: 16, fontWeight: 'bold', color: '#e94560', marginBottom: 10, marginTop: 20 },
   cocheList: { flex: 1, padding: 10 },
-  cocheCard: { backgroundColor: '#0f3460', padding: 12, borderRadius: 8, marginBottom: 8 }
+  cocheCard: { backgroundColor: '#0f3460', padding: 12, borderRadius: 8, marginBottom: 8 },
+  detalleView: { flex: 1, backgroundColor: '#1a1a2e' },
+  backBtn: { padding: 20, paddingTop: 10 },
+  backText: { color: '#e94560', fontSize: 16 },
+  detalleHeader: { padding: 20, paddingTop: 0 },
+  detalleNombre: { fontSize: 24, fontWeight: 'bold', color: '#fff', marginBottom: 8 },
+  detalleEmail: { color: '#888', fontSize: 16, marginBottom: 4 },
+  detalleMovil: { color: '#666', fontSize: 14 },
+  detalleSubtitle: { fontSize: 18, fontWeight: 'bold', color: '#e94560', marginTop: 30, paddingHorizontal: 20, marginBottom: 15 },
+  detalleCoche: { backgroundColor: '#16213e', marginHorizontal: 20, marginBottom: 12, padding: 16, borderRadius: 12 },
+  detalleMatricula: { fontSize: 18, fontWeight: 'bold', color: '#0ab1e6', marginBottom: 4 },
+  detalleModelo: { color: '#ccc', fontSize: 15 },
+  detalleAno: { color: '#666', fontSize: 13 }
 });
