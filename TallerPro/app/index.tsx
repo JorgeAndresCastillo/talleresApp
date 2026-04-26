@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, ScrollView, PanResponder } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, ScrollView, PanResponder, TextInput, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { api, setToken, getUser } from '../src/api';
 
@@ -48,16 +48,16 @@ export default function DashboardScreen() {
   const [detalleMode, setDetalleMode] = useState(false);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [cochesTodos, setCochesTodos] = useState<Coche[]>([]);
-  const [seleccionarMostrar, setSeleccionarMostrar] = useState<number | null>(null);
   const [citas, setCitas] = useState<Cita[]>([]);
   const [trabajos, setTrabajos] = useState<Trabajo[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<'clientes' | 'citas' | 'trabajos'>('clientes');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newClient, setNewClient] = useState({ nombre: '', email: '', movil: '', contrasena: '' });
 
   const loadData = async () => {
     try {
       const promises = [];
-      
       if (isAdmin) {
         promises.push(api.usuarios.list());
         promises.push(api.coches.list());
@@ -70,9 +70,7 @@ export default function DashboardScreen() {
         promises.push(api.coches.list());
         promises.push(api.citas.list());
       }
-      
       const results = await Promise.all(promises);
-      
       let i = 0;
       if (isAdmin) {
         if (Array.isArray(results[i])) setUsuarios(results[i++]);
@@ -86,57 +84,49 @@ export default function DashboardScreen() {
         if (Array.isArray(results[i])) setCochesTodos(results[i++]);
         if (Array.isArray(results[i])) setCitas(results[i++]);
       }
-    } catch (e) {
-      console.error(e);
+    } catch (e) { console.error(e); }
+  };
+
+  useEffect(() => { loadData(); }, []);
+  const onRefresh = async () => { setRefreshing(true); await loadData(); setRefreshing(false); };
+
+  const handleLogout = () => { setToken(null); router.replace('/login'); };
+
+  const handleAddClient = async () => {
+    if (!newClient.nombre || !newClient.email || !newClient.movil || !newClient.contrasena) {
+      Alert.alert('Todos los campos son obligatorios'); return;
     }
+    try {
+      const result = await api.usuarios.create({
+        nombre: newClient.nombre, email: newClient.email,
+        movil: newClient.movil, contrasena: newClient.contrasena, rol: 'cliente'
+      });
+      if (result.id) {
+        setShowAddModal(false);
+        setNewClient({ nombre: '', email: '', movil: '', contrasena: '' });
+        loadData();
+        Alert.alert('Cliente creado');
+      } else { Alert.alert(result.msg || 'Error al crear'); }
+    } catch (e) { Alert.alert('Error de conexión'); }
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  };
-
-  const handleLogout = () => {
-    setToken(null);
-    router.replace('/login');
-  };
-
-const selectCliente = (cliente: Usuario) => {
-    setSelectedCliente(cliente);
-  };
-
-  const openClienteDetalle = (cliente: Usuario) => {
-    setSelectedCliente(cliente);
-    setDetalleMode(true);
-  };
+  const openClienteDetalle = (cliente: Usuario) => { setSelectedCliente(cliente); setDetalleMode(true); };
 
   const renderCliente = ({ item }: { item: Usuario }) => (
-    <TouchableOpacity 
-      style={styles.clienteCard}
-      onPress={() => openClienteDetalle(item)}
-    >
+    <TouchableOpacity style={styles.clienteCard} onPress={() => openClienteDetalle(item)}>
       <Text style={styles.clienteNombre}>{item.nombre}</Text>
       <Text style={styles.clienteEmail}>{item.email}</Text>
       <Text style={styles.clienteMovil}>📱 {item.movil}</Text>
     </TouchableOpacity>
   );
 
-const renderDetalleCliente = () => {
+  const renderDetalleCliente = () => {
     if (!selectedCliente || !detalleMode) return null;
     const clientCars = cochesTodos.filter(c => c.cliente_id === selectedCliente.id);
-    
     const panResponder = PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dx) > 10,
-      onPanResponderMove: (_, gestureState) => {
-        if (gestureState.dx > 50) setDetalleMode(false);
-      }
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 10,
+      onPanResponderMove: (_, g) => { if (g.dx > 50) setDetalleMode(false); }
     });
-    
     return (
       <ScrollView style={styles.detalleView} {...panResponder.panHandlers}>
         <TouchableOpacity style={styles.backBtn} onPress={() => setDetalleMode(false)}>
@@ -147,38 +137,25 @@ const renderDetalleCliente = () => {
           <Text style={styles.detalleEmail}>{selectedCliente.email}</Text>
           <Text style={styles.detalleMovil}>📱 {selectedCliente.movil}</Text>
         </View>
-        
         <Text style={styles.detalleSubtitle}>Vehículos ({clientCars.length})</Text>
-        {clientCars.length > 0 ? (
-          clientCars.map(coche => (
-            <View key={coche.id} style={styles.detalleCoche}>
-              <Text style={styles.detalleMatricula}>{coche.matricula}</Text>
-              <Text style={styles.detalleModelo}>{coche.marca} {coche.modelo}</Text>
-              <Text style={styles.detalleAno}>{coche.anio} · {coche.kilometraje?.toLocaleString()} km</Text>
-            </View>
-          ))
-        ) : (
-          <Text style={styles.empty}>Sin vehículos</Text>
-        )}
+        {clientCars.length > 0 ? clientCars.map(c => (
+          <View key={c.id} style={styles.detalleCoche}>
+            <Text style={styles.detalleMatricula}>{c.matricula}</Text>
+            <Text style={styles.detalleModelo}>{c.marca} {c.modelo}</Text>
+            <Text style={styles.detalleAno}>{c.anio} · {c.kilometraje?.toLocaleString()} km</Text>
+          </View>
+        )) : <Text style={styles.empty}>Sin vehículos</Text>}
       </ScrollView>
     );
   };
 
-  const renderCita = ({ item }: { item: Cita }) => {
-    const estadoColor: Record<string, string> = {
-      pendiente: '#f59e0b',
-      aceptado: '#10b981',
-      rechazado: '#ef4444',
-      en_proceso: '#3b82f6',
-      completada: '#6366f1'
-    };
+const renderCita = ({ item }: { item: Cita }) => {
+    const ec: Record<string, string> = { pendiente: '#f59e0b', aceptado: '#10b981', rechazado: '#ef4444', en_proceso: '#3b82f6', completada: '#6366f1' };
     return (
       <View style={styles.card}>
         <View style={styles.citaRow}>
           <Text style={styles.matricula}>{item.matricula}</Text>
-          <View style={[styles.badge, { backgroundColor: estadoColor[item.estado] || '#64748b' }]}>
-            <Text style={styles.badgeText}>{item.estado}</Text>
-          </View>
+          <View style={[styles.badge, { backgroundColor: ec[item.estado] || '#64748b' }]}><Text style={styles.badgeText}>{item.estado}</Text></View>
         </View>
         <Text style={styles.info}>{item.fecha} a las {item.hora}</Text>
         <Text style={styles.info}>{item.descripcion}</Text>
@@ -187,11 +164,7 @@ const renderDetalleCliente = () => {
   };
 
   const renderTrabajo = ({ item }: { item: Trabajo }) => {
-    const estadoColor: Record<string, string> = {
-      pendiente: '#f59e0b',
-      en_proceso: '#3b82f6',
-      completada: '#10b981'
-    };
+    const ec: Record<string, string> = { pendiente: '#f59e0b', en_proceso: '#3b82f6', completada: '#10b981' };
     return (
       <TouchableOpacity style={styles.card}>
         <View style={styles.citaRow}>
@@ -199,73 +172,50 @@ const renderDetalleCliente = () => {
           <Text style={styles.precio}>{item.precio}€</Text>
         </View>
         <Text style={styles.info}>{item.descripcion}</Text>
-        <View style={[styles.badge, { backgroundColor: estadoColor[item.estado] || '#64748b', marginTop: 4 }]}>
+        <View style={[styles.badge, { backgroundColor: ec[item.estado] || '#64748b', marginTop: 4 }]}>
           <Text style={styles.badgeText}>{item.estado}</Text>
         </View>
       </TouchableOpacity>
     );
   };
 
-  const getTitle = () => {
-    if (isAdmin) return 'Admin - Talleres Castillo';
-    if (isMecanico) return 'Mecánico - Talleres Castillo';
-    return 'Mi Garage';
-  };
+  const getTitle = () => isAdmin ? 'Admin - Talleres Castillo' : isMecanico ? 'Mecánico - Talleres Castillo' : 'Mi Garage';
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>{getTitle()}</Text>
-        <TouchableOpacity onPress={handleLogout}>
-          <Text style={styles.logout}>Salir</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          {tab === 'clientes' && isAdmin && <TouchableOpacity onPress={() => setShowAddModal(true)}><Text style={styles.addBtn}>+</Text></TouchableOpacity>}
+          <TouchableOpacity onPress={handleLogout}><Text style={styles.logout}>Salir</Text></TouchableOpacity>
+        </View>
       </View>
-
       <View style={styles.tabs}>
-        {isAdmin && (
-          <TouchableOpacity style={[styles.tab, tab === 'clientes' && styles.tabActive]} onPress={() => setTab('clientes')}>
-            <Text style={[styles.tabText, tab === 'clientes' && styles.tabTextActive]}>Clientes</Text>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity style={[styles.tab, tab === 'citas' && styles.tabActive]} onPress={() => setTab('citas')}>
-          <Text style={[styles.tabText, tab === 'citas' && styles.tabTextActive]}>Citas</Text>
-        </TouchableOpacity>
-        {(isMecanico || isAdmin) && (
-          <TouchableOpacity style={[styles.tab, tab === 'trabajos' && styles.tabActive]} onPress={() => setTab('trabajos')}>
-            <Text style={[styles.tabText, tab === 'trabajos' && styles.tabTextActive]}>Trabajos</Text>
-          </TouchableOpacity>
-        )}
+        {isAdmin && <TouchableOpacity style={[styles.tab, tab === 'clientes' && styles.tabActive]} onPress={() => setTab('clientes')}><Text style={[styles.tabText, tab === 'clientes' && styles.tabTextActive]}>Clientes</Text></TouchableOpacity>}
+        <TouchableOpacity style={[styles.tab, tab === 'citas' && styles.tabActive]} onPress={() => setTab('citas')}><Text style={[styles.tabText, tab === 'citas' && styles.tabTextActive]}>Citas</Text></TouchableOpacity>
+        {(isMecanico || isAdmin) && <TouchableOpacity style={[styles.tab, tab === 'trabajos' && styles.tabActive]} onPress={() => setTab('trabajos')}><Text style={[styles.tabText, tab === 'trabajos' && styles.tabTextActive]}>Trabajos</Text></TouchableOpacity>}
       </View>
-
-      {tab === 'clientes' && isAdmin ? (
-        detalleMode ? renderDetalleCliente() : (
-          <FlatList
-            data={usuarios.filter(u => u.rol === 'cliente')}
-            keyExtractor={item => item.id.toString()}
-            renderItem={renderCliente}
-            contentContainerStyle={styles.list}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#e94560" />}
-            ListEmptyComponent={<Text style={styles.empty}>No hay clientes</Text>}
-          />
-        )
+      {tab === 'clientes' && isAdmin ? detalleMode ? renderDetalleCliente() : (
+        <FlatList data={usuarios.filter(u => u.rol === 'cliente')} keyExtractor={i => i.id.toString()} renderItem={renderCliente} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#e94560" />} ListEmptyComponent={<Text style={styles.empty}>No hay clientes</Text>} />
       ) : tab === 'citas' ? (
-        <FlatList
-          data={citas}
-          keyExtractor={item => item.id.toString()}
-          renderItem={renderCita}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#e94560" />}
-          contentContainerStyle={styles.list}
-          ListEmptyComponent={<Text style={styles.empty}>No hay citas</Text>}
-        />
+        <FlatList data={citas} keyExtractor={i => i.id.toString()} renderItem={renderCita} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#e94560" />} ListEmptyComponent={<Text style={styles.empty}>No hay citas</Text>} />
       ) : (
-        <FlatList
-          data={trabajos}
-          keyExtractor={item => item.id.toString()}
-          renderItem={renderTrabajo}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#e94560" />}
-          contentContainerStyle={styles.list}
-          ListEmptyComponent={<Text style={styles.empty}>No hay trabajos</Text>}
-        />
+        <FlatList data={trabajos} keyExtractor={i => i.id.toString()} renderItem={renderTrabajo} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#e94560" />} ListEmptyComponent={<Text style={styles.empty}>No hay trabajos</Text>} />
+      )}
+      {showAddModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>Nuevo Cliente</Text>
+            <TextInput style={styles.modalInput} placeholder="Nombre" value={newClient.nombre} onChangeText={t => setNewClient({...newClient, nombre: t})} />
+            <TextInput style={styles.modalInput} placeholder="Email" value={newClient.email} onChangeText={t => setNewClient({...newClient, email: t})} keyboardType="email-address" />
+            <TextInput style={styles.modalInput} placeholder="Móvil" value={newClient.movil} onChangeText={t => setNewClient({...newClient, movil: t})} keyboardType="phone-pad" />
+            <TextInput style={styles.modalInput} placeholder="Contraseña" value={newClient.contrasena} onChangeText={t => setNewClient({...newClient, contrasena: t})} secureTextEntry />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.modalBtn} onPress={handleAddClient}><Text style={styles.modalBtnText}>Crear</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.modalBtn, styles.modalBtnCancel]} onPress={() => setShowAddModal(false)}><Text style={styles.modalBtnTextCancel}>Cancelar</Text></TouchableOpacity>
+            </View>
+          </View>
+        </View>
       )}
     </View>
   );
@@ -276,6 +226,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 50 },
   title: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
   logout: { color: '#e94560', fontSize: 14 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 15 },
+  addBtn: { color: '#10b981', fontSize: 24, fontWeight: 'bold' },
   tabs: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 10 },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
   tabActive: { borderBottomColor: '#e94560' },
@@ -290,17 +242,10 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   badgeText: { color: '#fff', fontSize: 12, fontWeight: 'bold', textTransform: 'capitalize' },
   precio: { color: '#10b981', fontSize: 18, fontWeight: 'bold' },
-  splitView: { flex: 1, flexDirection: 'row' },
-  clienteList: { flex: 1, borderRightWidth: 1, borderRightColor: '#333' },
-  clienteCard: { backgroundColor: '#16213e', padding: 16, marginBottom: 8, borderRadius: 8, marginHorizontal: 10 },
-  clienteCardSelected: { borderLeftWidth: 3, borderLeftColor: '#e94560' },
-  clienteNombre: { fontSize: 16, fontWeight: 'bold', color: '#fff' },
-  clienteEmail: { color: '#888', fontSize: 13 },
+  clienteCard: { backgroundColor: '#16213e', padding: 16, marginBottom: 12, borderRadius: 12 },
+  clienteNombre: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
+  clienteEmail: { color: '#888', fontSize: 14 },
   clienteMovil: { color: '#666', fontSize: 12 },
-  subList: { padding: 20 },
-  subtitle: { fontSize: 16, fontWeight: 'bold', color: '#e94560', marginBottom: 10, marginTop: 20 },
-  cocheList: { flex: 1, padding: 10 },
-  cocheCard: { backgroundColor: '#0f3460', padding: 12, borderRadius: 8, marginBottom: 8 },
   detalleView: { flex: 1, backgroundColor: '#1a1a2e' },
   backBtn: { padding: 20, paddingTop: 10 },
   backText: { color: '#e94560', fontSize: 16 },
@@ -312,5 +257,14 @@ const styles = StyleSheet.create({
   detalleCoche: { backgroundColor: '#16213e', marginHorizontal: 20, marginBottom: 12, padding: 16, borderRadius: 12 },
   detalleMatricula: { fontSize: 18, fontWeight: 'bold', color: '#0ab1e6', marginBottom: 4 },
   detalleModelo: { color: '#ccc', fontSize: 15 },
-  detalleAno: { color: '#666', fontSize: 13 }
+  detalleAno: { color: '#666', fontSize: 13 },
+  modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' },
+  modal: { backgroundColor: '#16213e', padding: 24, borderRadius: 16, width: '85%', maxWidth: 350 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginBottom: 20, textAlign: 'center' },
+  modalInput: { backgroundColor: '#1a1a2e', color: '#fff', padding: 14, borderRadius: 8, marginBottom: 12, fontSize: 15 },
+  modalButtons: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  modalBtn: { flex: 1, backgroundColor: '#e94560', padding: 14, borderRadius: 8, alignItems: 'center' },
+  modalBtnCancel: { backgroundColor: '#333' },
+  modalBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  modalBtnTextCancel: { color: '#ccc', fontSize: 16 }
 });
