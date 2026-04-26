@@ -53,6 +53,8 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<'clientes' | 'citas' | 'trabajos'>('clientes');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingClient, setEditingClient] = useState<Usuario | null>(null);
+  const [editData, setEditData] = useState({ nombre: '', email: '', movil: '' });
   const [newClient, setNewClient] = useState({ nombre: '', email: '', movil: '', contrasena: '' });
 
   const loadData = async () => {
@@ -110,6 +112,25 @@ export default function DashboardScreen() {
     } catch (e) { Alert.alert('Error de conexión'); }
   };
 
+  const handleEditClient = async () => {
+    if (!editData.nombre || !editData.email || !editData.movil) {
+      Alert.alert('Todos los campos son obligatorios'); return;
+    }
+    try {
+      const result = await api.usuarios.update(editingClient!.id, editData);
+      if (result.id) {
+        setEditingClient(null);
+        loadData();
+        Alert.alert('Cliente actualizado');
+      } else { Alert.alert(result.msg || 'Error al actualizar'); }
+    } catch (e) { Alert.alert('Error de conexión'); }
+  };
+
+  const openEditCliente = (cliente: Usuario) => {
+    setEditingClient(cliente);
+    setEditData({ nombre: cliente.nombre, email: cliente.email, movil: cliente.movil });
+  };
+
   const openClienteDetalle = (cliente: Usuario) => { setSelectedCliente(cliente); setDetalleMode(true); };
 
   const renderCliente = ({ item }: { item: Usuario }) => (
@@ -129,9 +150,14 @@ export default function DashboardScreen() {
     });
     return (
       <ScrollView style={styles.detalleView} {...panResponder.panHandlers}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => setDetalleMode(false)}>
-          <Text style={styles.backText}>← Volver (swipe right)</Text>
-        </TouchableOpacity>
+        <View style={styles.detalleActions}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => setDetalleMode(false)}>
+            <Text style={styles.backText}>← Volver</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.editBtn} onPress={() => openEditCliente(selectedCliente)}>
+            <Text style={styles.editBtnText}>✏️ Editar</Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.detalleHeader}>
           <Text style={styles.detalleNombre}>{selectedCliente.nombre}</Text>
           <Text style={styles.detalleEmail}>{selectedCliente.email}</Text>
@@ -217,6 +243,21 @@ const renderCita = ({ item }: { item: Cita }) => {
           </View>
         </View>
       )}
+
+      {editingClient && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>Editar Cliente</Text>
+            <TextInput style={styles.modalInput} placeholder="Nombre" value={editData.nombre} onChangeText={t => setEditData({...editData, nombre: t})} />
+            <TextInput style={styles.modalInput} placeholder="Email" value={editData.email} onChangeText={t => setEditData({...editData, email: t})} keyboardType="email-address" />
+            <TextInput style={styles.modalInput} placeholder="Móvil" value={editData.movil} onChangeText={t => setEditData({...editData, movil: t})} keyboardType="phone-pad" />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.modalBtn} onPress={handleEditClient}><Text style={styles.modalBtnText}>Guardar</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.modalBtn, styles.modalBtnCancel]} onPress={() => setEditingClient(null)}><Text style={styles.modalBtnTextCancel}>Cancelar</Text></TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -247,8 +288,11 @@ const styles = StyleSheet.create({
   clienteEmail: { color: '#888', fontSize: 14 },
   clienteMovil: { color: '#666', fontSize: 12 },
   detalleView: { flex: 1, backgroundColor: '#1a1a2e' },
-  backBtn: { padding: 20, paddingTop: 10 },
+  detalleActions: { flexDirection: 'row', justifyContent: 'space-between', padding: 20, paddingTop: 10 },
+  backBtn: { paddingRight: 15 },
   backText: { color: '#e94560', fontSize: 16 },
+  editBtn: { backgroundColor: '#3b82f6', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
+  editBtnText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
   detalleHeader: { padding: 20, paddingTop: 0 },
   detalleNombre: { fontSize: 24, fontWeight: 'bold', color: '#fff', marginBottom: 8 },
   detalleEmail: { color: '#888', fontSize: 16, marginBottom: 4 },
