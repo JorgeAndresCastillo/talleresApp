@@ -19,18 +19,21 @@ export default function DashboardScreen() {
   const [selectedMecanico, setSelectedMecanico] = useState<Usuario | null>(null);
   const [mecanicoMode, setMecanicoMode] = useState(false);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [myVehicles, setMyVehicles] = useState<Coche[]>([]);
   const [cochesTodos, setCochesTodos] = useState<Coche[]>([]);
   const [citas, setCitas] = useState<Cita[]>([]);
   const [trabajos, setTrabajos] = useState<Trabajo[]>([]);
   const [myJobs, setMyJobs] = useState<Trabajo[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [tab, setTab] = useState<'clientes' | 'mecanicos' | 'citas' | 'trabajos' | 'taller'>('clientes');
+  const [tab, setTab] = useState<'garage' | 'citas' | 'trabajos' | 'taller' | 'clientes' | 'mecanicos'>('garage');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showVehicleModal, setShowVehicleModal] = useState(false);
   const [editingClient, setEditingClient] = useState<Usuario | null>(null);
   const [editingMecanico, setEditingMecanico] = useState<Usuario | null>(null);
   const [showAddMecanicoModal, setShowAddMecanicoModal] = useState(false);
   const [newClient, setNewClient] = useState({ nombre: '', email: '', movil: '', contrasena: '' });
   const [newMecanico, setNewMecanico] = useState({ nombre: '', email: '', movil: '', contrasena: '' });
+  const [newVehicle, setNewVehicle] = useState({ matricula: '', marca: '', modelo: '', anio: '', kilometraje: '' });
   const [editData, setEditData] = useState({ nombre: '', email: '', movil: '' });
 
   const loadData = async () => {
@@ -50,7 +53,7 @@ export default function DashboardScreen() {
       } else if (isMecanico) {
         setMyJobs(results[i]); setCitas(results[++i]);
       } else {
-        setCochesTodos(results[i]); setCitas(results[++i]);
+        setMyVehicles(results[i]); setCitas(results[++i]);
       }
     } catch (e) { console.error(e); }
   };
@@ -63,6 +66,21 @@ export default function DashboardScreen() {
     try {
       const result = await api.usuarios.create({ nombre: newClient.nombre, email: newClient.email, movil: newClient.movil, contrasena: newClient.contrasena, rol: 'cliente' });
       if (result.id) { setShowAddModal(false); setNewClient({ nombre: '', email: '', movil: '', contrasena: '' }); loadData(); Alert.alert('Cliente creado'); }
+      else { Alert.alert(result.msg || 'Error al crear'); }
+    } catch (e) { Alert.alert('Error de conexión'); }
+  };
+
+  const handleAddVehicle = async () => {
+    if (!newVehicle.matricula || !newVehicle.marca || !newVehicle.modelo) { Alert.alert('Matrícula, marca y modelo son obligatorios'); return; }
+    try {
+      const result = await api.coches.create({
+        matricula: newVehicle.matricula.toUpperCase(),
+        marca: newVehicle.marca,
+        modelo: newVehicle.modelo,
+        anio: newVehicle.anio ? parseInt(newVehicle.anio) : null,
+        kilometraje: newVehicle.kilometraje ? parseInt(newVehicle.kilometraje) : null
+      });
+      if (result.id) { setShowVehicleModal(false); setNewVehicle({ matricula: '', marca: '', modelo: '', anio: '', kilometraje: '' }); loadData(); Alert.alert('Vehículo agregado'); }
       else { Alert.alert(result.msg || 'Error al crear'); }
     } catch (e) { Alert.alert('Error de conexión'); }
   };
@@ -127,6 +145,14 @@ export default function DashboardScreen() {
       <Text style={styles.clienteEmail}>{item.email}</Text>
       <Text style={styles.clienteMovil}>📱 {item.movil}</Text>
     </TouchableOpacity>
+  );
+
+  const renderVehicle = ({ item }: { item: Coche }) => (
+    <View style={styles.vehicleCard}>
+      <Text style={styles.vehicleMatricula}>{item.matricula}</Text>
+      <Text style={styles.vehicleInfo}>{item.marca} {item.modelo}</Text>
+      <Text style={styles.vehicleYear}>{item.anio || '-'}</Text>
+    </View>
   );
 
   const renderDetalleCliente = () => {
@@ -196,20 +222,23 @@ export default function DashboardScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>{getTitle()}</Text>
         <View style={styles.headerRight}>
+          {tab === 'garage' && !isAdmin && !isMecanico && <TouchableOpacity onPress={() => setShowVehicleModal(true)}><Text style={styles.addBtn}>+</Text></TouchableOpacity>}
           {tab === 'clientes' && isAdmin && <TouchableOpacity onPress={() => setShowAddModal(true)}><Text style={styles.addBtn}>+</Text></TouchableOpacity>}
           {tab === 'mecanicos' && isAdmin && <TouchableOpacity onPress={() => setShowAddMecanicoModal(true)}><Text style={styles.addBtn}>+</Text></TouchableOpacity>}
           <TouchableOpacity onPress={() => { setToken(null); router.replace('/login'); }}><Text style={styles.logoutBtn}>Salir</Text></TouchableOpacity>
         </View>
       </View>
       <View style={styles.tabs}>
+        {!isAdmin && !isMecanico && <TouchableOpacity style={styles.tab} onPress={() => setTab('garage')}><Text style={tab === 'garage' ? styles.tabTextActive : styles.tabText}>Garaje</Text></TouchableOpacity>}
+        <TouchableOpacity style={styles.tab} onPress={() => setTab('citas')}><Text style={tab === 'citas' ? styles.tabTextActive : styles.tabText}>Citas</Text></TouchableOpacity>
         {isAdmin && <TouchableOpacity style={styles.tab} onPress={() => setTab('clientes')}><Text style={tab === 'clientes' ? styles.tabTextActive : styles.tabText}>Clientes</Text></TouchableOpacity>}
         {isAdmin && <TouchableOpacity style={styles.tab} onPress={() => setTab('mecanicos')}><Text style={tab === 'mecanicos' ? styles.tabTextActive : styles.tabText}>Mecánicos</Text></TouchableOpacity>}
-        <TouchableOpacity style={styles.tab} onPress={() => setTab('citas')}><Text style={tab === 'citas' ? styles.tabTextActive : styles.tabText}>Citas</Text></TouchableOpacity>
         {isMecanico && <TouchableOpacity style={styles.tab} onPress={() => setTab('taller')}><Text style={tab === 'taller' ? styles.tabTextActive : styles.tabText}>Mi Taller</Text></TouchableOpacity>}
         {(isMecanico || isAdmin) && <TouchableOpacity style={styles.tab} onPress={() => setTab('trabajos')}><Text style={tab === 'trabajos' ? styles.tabTextActive : styles.tabText}>Trabajos</Text></TouchableOpacity>}
       </View>
       <View style={styles.currentTab}><Text style={styles.currentTabText}>{getTabName(tab)}</Text></View>
-      {tab === 'clientes' && isAdmin ? detalleMode ? renderDetalleCliente() : <FlatList data={usuarios.filter(u => u.rol === 'cliente')} keyExtractor={i => i.id.toString()} renderItem={renderCliente} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} ListEmptyComponent={<Text style={styles.empty}>Sin clientes</Text>} /> : 
+      {tab === 'garage' && !isAdmin && !isMecanico ? <FlatList data={myVehicles} keyExtractor={i => i.id.toString()} renderItem={renderVehicle} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} ListEmptyComponent={<Text style={styles.empty}>Sin vehículos</Text>} /> : 
+       tab === 'clientes' && isAdmin ? detalleMode ? renderDetalleCliente() : <FlatList data={usuarios.filter(u => u.rol === 'cliente')} keyExtractor={i => i.id.toString()} renderItem={renderCliente} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} ListEmptyComponent={<Text style={styles.empty}>Sin clientes</Text>} /> : 
        tab === 'mecanicos' && isAdmin ? mecanicoMode ? renderDetalleMecanico() : <FlatList data={usuarios.filter(u => u.rol === 'mecanico')} keyExtractor={i => i.id.toString()} renderItem={renderMecanico} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} ListEmptyComponent={<Text style={styles.empty}>Sin mecánicos</Text>} /> :
        tab === 'citas' ? <FlatList data={citas} keyExtractor={i => i.id.toString()} renderItem={renderCita} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} /> :
        tab === 'taller' && isMecanico ? <FlatList data={myJobs} keyExtractor={i => i.id.toString()} renderItem={renderMiTrabajo} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} ListEmptyComponent={<Text style={styles.empty}>Sin trabajos</Text>} /> :
@@ -218,6 +247,7 @@ export default function DashboardScreen() {
       {editingClient && <View style={styles.modalOverlay}><View style={styles.modal}><Text style={styles.modalTitle}>Editar Cliente</Text><TextInput style={styles.modalInput} placeholder="Nombre" value={editData.nombre} onChangeText={t => setEditData({...editData, nombre: t})} /><TextInput style={styles.modalInput} placeholder="Email" value={editData.email} onChangeText={t => setEditData({...editData, email: t})} keyboardType="email-address" /><TextInput style={styles.modalInput} placeholder="Móvil" value={editData.movil} onChangeText={t => setEditData({...editData, movil: t})} keyboardType="phone-pad" /><View style={styles.modalButtons}><TouchableOpacity style={styles.modalBtn} onPress={handleEditClient}><Text style={styles.modalBtnText}>Guardar</Text></TouchableOpacity><TouchableOpacity style={[styles.modalBtn, styles.modalBtnCancel]} onPress={() => setEditingClient(null)}><Text style={styles.modalBtnTextCancel}>Cancelar</Text></TouchableOpacity></View></View></View>}
       {showAddMecanicoModal && <View style={styles.modalOverlay}><View style={styles.modal}><Text style={styles.modalTitle}>Nuevo Mecánico</Text><TextInput style={styles.modalInput} placeholder="Nombre" value={newMecanico.nombre} onChangeText={t => setNewMecanico({...newMecanico, nombre: t})} /><TextInput style={styles.modalInput} placeholder="Email" value={newMecanico.email} onChangeText={t => setNewMecanico({...newMecanico, email: t})} keyboardType="email-address" /><TextInput style={styles.modalInput} placeholder="Móvil" value={newMecanico.movil} onChangeText={t => setNewMecanico({...newMecanico, movil: t})} keyboardType="phone-pad" /><TextInput style={styles.modalInput} placeholder="Contraseña" value={newMecanico.contrasena} onChangeText={t => setNewMecanico({...newMecanico, contrasena: t})} secureTextEntry /><View style={styles.modalButtons}><TouchableOpacity style={styles.modalBtn} onPress={handleAddMecanico}><Text style={styles.modalBtnText}>Crear</Text></TouchableOpacity><TouchableOpacity style={[styles.modalBtn, styles.modalBtnCancel]} onPress={() => setShowAddMecanicoModal(false)}><Text style={styles.modalBtnTextCancel}>Cancelar</Text></TouchableOpacity></View></View></View>}
       {editingMecanico && <View style={styles.modalOverlay}><View style={styles.modal}><Text style={styles.modalTitle}>Editar Mecánico</Text><TextInput style={styles.modalInput} placeholder="Nombre" value={editData.nombre} onChangeText={t => setEditData({...editData, nombre: t})} /><TextInput style={styles.modalInput} placeholder="Email" value={editData.email} onChangeText={t => setEditData({...editData, email: t})} keyboardType="email-address" /><TextInput style={styles.modalInput} placeholder="Móvil" value={editData.movil} onChangeText={t => setEditData({...editData, movil: t})} keyboardType="phone-pad" /><View style={styles.modalButtons}><TouchableOpacity style={styles.modalBtn} onPress={handleEditMecanico}><Text style={styles.modalBtnText}>Guardar</Text></TouchableOpacity><TouchableOpacity style={[styles.modalBtn, styles.modalBtnCancel]} onPress={() => setEditingMecanico(null)}><Text style={styles.modalBtnTextCancel}>Cancelar</Text></TouchableOpacity></View></View></View>}
+      {showVehicleModal && <View style={styles.modalOverlay}><View style={styles.modal}><Text style={styles.modalTitle}>Nuevo Vehículo</Text><TextInput style={styles.modalInput} placeholder="Matrícula" value={newVehicle.matricula} onChangeText={t => setNewVehicle({...newVehicle, matricula: t.toUpperCase()})} /><TextInput style={styles.modalInput} placeholder="Marca" value={newVehicle.marca} onChangeText={t => setNewVehicle({...newVehicle, marca: t})} /><TextInput style={styles.modalInput} placeholder="Modelo" value={newVehicle.modelo} onChangeText={t => setNewVehicle({...newVehicle, modelo: t})} /><TextInput style={styles.modalInput} placeholder="Año" value={newVehicle.anio} onChangeText={t => setNewVehicle({...newVehicle, anio: t})} keyboardType="numeric" /><TextInput style={styles.modalInput} placeholder="Kilómetros" value={newVehicle.kilometraje} onChangeText={t => setNewVehicle({...newVehicle, kilometraje: t})} keyboardType="numeric" /><View style={styles.modalButtons}><TouchableOpacity style={styles.modalBtn} onPress={handleAddVehicle}><Text style={styles.modalBtnText}>Crear</Text></TouchableOpacity><TouchableOpacity style={[styles.modalBtn, styles.modalBtnCancel]} onPress={() => setShowVehicleModal(false)}><Text style={styles.modalBtnTextCancel}>Cancelar</Text></TouchableOpacity></View></View></View>}
     </View>
   );
 }
@@ -261,6 +291,10 @@ const styles = StyleSheet.create({
   badgeText: { color: '#fff', fontSize: 12 },
   miTrabajoCard: { backgroundColor: '#16213e', padding: 16, marginBottom: 12, borderRadius: 12 },
   miTrabajoMatricula: { fontSize: 20, fontWeight: 'bold', color: '#0ab1e6' },
+  vehicleCard: { backgroundColor: '#16213e', padding: 16, marginBottom: 12, borderRadius: 12, borderLeftWidth: 4, borderLeftColor: '#e94560' },
+  vehicleMatricula: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
+  vehicleInfo: { color: '#888', marginTop: 4 },
+  vehicleYear: { color: '#666', fontSize: 12, marginTop: 2 },
   iniciarBtn: { backgroundColor: '#3b82f6', padding: 12, borderRadius: 8, marginTop: 12, alignItems: 'center' },
   completarBtn: { backgroundColor: '#10b981', padding: 12, borderRadius: 8, marginTop: 12, alignItems: 'center' },
   btnText: { color: '#fff', fontWeight: 'bold' },
