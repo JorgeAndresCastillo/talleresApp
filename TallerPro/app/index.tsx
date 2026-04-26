@@ -197,7 +197,7 @@ export default function DashboardScreen() {
         <View style={styles.headerRight}>
           {tab === 'clientes' && isAdmin && <TouchableOpacity onPress={() => setShowAddModal(true)}><Text style={styles.addBtn}>+</Text></TouchableOpacity>}
           {tab === 'mecanicos' && isAdmin && <TouchableOpacity onPress={() => setShowAddMecanicoModal(true)}><Text style={styles.addBtn}>+</Text></TouchableOpacity>}
-          <TouchableOpacity onPress={() => { setToken(null); router.replace('/login'); }}><Text style={styles.logout}>Salir</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => { setToken(null); router.replace('/login'); }}><Text style={styles.logoutBtn}>Salir</Text></TouchableOpacity>
         </View>
       </View>
       <View style={styles.tabs}>
@@ -224,9 +224,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1a1a2e', paddingTop: 50 },
   header: { flexDirection: 'row', justifyContent: 'space-between', padding: 20 },
   title: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
-  headerRight: { flexDirection: 'row', gap: 15 },
-  addBtn: { color: '#10b981', fontSize: 24 },
-  logout: { color: '#e94560' },
+  headerRight: { flexDirection: 'row', gap: 20 },
+  addBtn: { color: '#10b981', fontSize: 24, paddingHorizontal: 10 },
+  logoutBtn: { color: '#e94560', fontSize: 14, fontWeight: 'bold', paddingVertical: 6, paddingHorizontal: 16, backgroundColor: '#e94560', borderRadius: 8, overflow: 'hidden' },
   tabs: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 10 },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
   tabText: { color: '#888', fontSize: 14 },
