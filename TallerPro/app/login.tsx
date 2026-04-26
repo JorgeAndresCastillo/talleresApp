@@ -12,7 +12,7 @@ export default function LoginScreen() {
     try {
       const data = await api.auth.login({ email, contrasena: password });
       if (data.token) {
-        const user = { id: data.id, email: data.email, rol: data.rol };
+        const user = { id: data.id, email: data.email, rol: data.rol, nombre: data.nombre };
         setToken(data.token, user);
         // Redirect based on role
         if (data.rol === 'cliente') {

@@ -1,9 +1,9 @@
 const API_URL = 'http://172.20.10.14:3000';
 
 let storedToken: string | null = null;
-let storedUser: { id: number; email: string; rol: string } | null = null;
+let storedUser: { id: number; email: string; rol: string; nombre?: string } | null = null;
 
-export const setToken = (token: string | null, user?: { id: number; email: string; rol: string }) => {
+export const setToken = (token: string | null, user?: { id: number; email: string; rol: string; nombre?: string }) => {
   storedToken = token;
   storedUser = user || null;
 };
