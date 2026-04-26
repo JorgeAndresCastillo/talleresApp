@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', padding: 20 },
   title: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
   headerRight: { flexDirection: 'row', gap: 20 },
-  addBtn: { color: '#10b981', fontSize: 24, paddingHorizontal: 10 },
+  addBtn: { color: '#10b981', fontSize: 32, paddingHorizontal: 10, fontWeight: 'bold' },
   logoutBtn: { color: '#fff', fontSize: 14, fontWeight: 'bold', paddingVertical: 6, paddingHorizontal: 16, backgroundColor: '#e94560', borderRadius: 8, overflow: 'hidden' },
   tabs: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 10, borderBottomWidth: 1, borderBottomColor: '#333' },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
