@@ -37,6 +37,11 @@ export const api = {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(data)
+    }).then(res => res.json()),
+    update: (id: number, data: any) => fetch(`${API_URL}/usuarios/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
     }).then(res => res.json())
   },
   coches: {
