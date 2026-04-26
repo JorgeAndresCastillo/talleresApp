@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
   headerRight: { flexDirection: 'row', gap: 20 },
   addBtn: { color: '#10b981', fontSize: 24, paddingHorizontal: 10 },
-  logoutBtn: { color: '#e94560', fontSize: 14, fontWeight: 'bold', paddingVertical: 6, paddingHorizontal: 16, backgroundColor: '#e94560', borderRadius: 8, overflow: 'hidden' },
+  logoutBtn: { color: '#fff', fontSize: 14, fontWeight: 'bold', paddingVertical: 6, paddingHorizontal: 16, backgroundColor: '#e94560', borderRadius: 8, overflow: 'hidden' },
   tabs: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 10 },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
   tabText: { color: '#888', fontSize: 14 },
