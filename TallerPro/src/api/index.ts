@@ -1,4 +1,4 @@
-const API_URL = 'http://172.20.10.2:3000';
+const API_URL = 'http://172.20.10.14:3000';
 
 let storedToken: string | null = null;
 let storedUser: { id: number; email: string; rol: string } | null = null;

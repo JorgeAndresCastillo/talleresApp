@@ -576,10 +576,7 @@ const styles = {
   modalActions: { display: 'flex', gap: '12px', marginTop: '20px' },
   saveBtn: { flex: 1, padding: '12px', background: '#e94560', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' },
   cancelBtn: { flex: 1, padding: '12px', background: '#333', color: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' },
-  actionBtn: { padding: '8px 16px', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' },
-  emptyState: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px', color: '#666' },
-  emptyIcon: { fontSize: '48px', marginBottom: '16px' },
-  pageTitle: { fontSize: '24px', fontWeight: '700', color: 'white', marginBottom: '24px' }
+  actionBtn: { padding: '8px 16px', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }
 };
 
 export default Dashboard;
