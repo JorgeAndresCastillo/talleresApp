@@ -138,8 +138,10 @@ export default function DashboardScreen() {
 
   const pickImage = async () => {
     if (!selectedVehicle) return;
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') { Alert.alert('Permiso de cámara necesario'); return; }
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['image'],
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.8,
