@@ -51,6 +51,11 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(data)
     }).then(res => res.json()),
+    update: (id: number, data: any) => fetch(`${API_URL}/coches/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    }).then(res => res.json()),
     delete: (id: number) => fetch(`${API_URL}/coches/${id}`, {
       method: 'DELETE',
       headers: getHeaders()

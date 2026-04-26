@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, ScrollView, PanResponder, TextInput, Alert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, ScrollView, PanResponder, TextInput, Alert, Image, Modal, Pressable, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { api, setToken, getUser } from '../src/api';
+import * as ImagePicker from 'expo-image-picker';
 
 interface Usuario { id: number; nombre: string; email: string; rol: string; movil: string; }
-interface Coche { id: number; matricula: string; marca: string; modelo: string; anio: number; kilometraje: number; cliente_id: number; }
+interface Coche { id: number; matricula: string; marca: string; modelo: string; anio: number; kilometraje: number; cliente_id: number; foto?: string; }
 interface Cita { id: number; fecha: string; hora: string; estado: string; descripcion: string; matricula: string; }
 interface Trabajo { id: number; descripcion: string; estado: string; matricula: string; precio: number; mecanico_id?: number; }
 
@@ -28,6 +29,9 @@ export default function DashboardScreen() {
   const [tab, setTab] = useState<'garage' | 'citas' | 'trabajos' | 'taller' | 'clientes' | 'mecanicos'>('garage');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showVehicleModal, setShowVehicleModal] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState<Coche | null>(null);
+  const [showVehicleDetail, setShowVehicleDetail] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [editingClient, setEditingClient] = useState<Usuario | null>(null);
   const [editingMecanico, setEditingMecanico] = useState<Usuario | null>(null);
   const [showAddMecanicoModal, setShowAddMecanicoModal] = useState(false);
@@ -132,6 +136,33 @@ export default function DashboardScreen() {
 
   const openEditMecanico = (mecanico: Usuario) => { setEditingMecanico(mecanico); setEditData({ nombre: mecanico.nombre, email: mecanico.email, movil: mecanico.movil }); };
 
+  const pickImage = async () => {
+    if (!selectedVehicle) return;
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+      base64: true
+    });
+    if (!result.canceled && result.assets[0].base64) {
+      setUploading(true);
+      try {
+        const fotoBase64 = `data:image/jpeg;base64,${result.assets[0].base64}`;
+        const updateData = { foto: fotoBase64 };
+        const res = await api.coches.update(selectedVehicle.id, updateData);
+        if (res.id) {
+          setSelectedVehicle({ ...selectedVehicle, foto: fotoBase64 });
+          loadData();
+          Alert.alert('Foto guardada');
+        } else {
+          Alert.alert('Error al guardar');
+        }
+      } catch (e) { Alert.alert('Error de conexión'); }
+      setUploading(false);
+    }
+  };
+
   const renderCliente = ({ item }: { item: Usuario }) => (
     <TouchableOpacity style={styles.clienteCard} onPress={() => { setSelectedCliente(item); setDetalleMode(true); }}>
       <Text style={styles.clienteNombre}>{item.nombre}</Text>
@@ -148,11 +179,12 @@ export default function DashboardScreen() {
   );
 
   const renderVehicle = ({ item }: { item: Coche }) => (
-    <View style={styles.vehicleCard}>
+    <TouchableOpacity style={styles.vehicleCard} onPress={() => { setSelectedVehicle(item); setShowVehicleDetail(true); }}>
+      {item.foto && <Image source={{ uri: item.foto }} style={styles.vehicleImage} />}
       <Text style={styles.vehicleMatricula}>{item.matricula}</Text>
       <Text style={styles.vehicleInfo}>{item.marca} {item.modelo}</Text>
       <Text style={styles.vehicleYear}>{item.anio || '-'}</Text>
-    </View>
+    </TouchableOpacity>
   );
 
   const renderDetalleCliente = () => {
@@ -248,6 +280,23 @@ export default function DashboardScreen() {
       {showAddMecanicoModal && <View style={styles.modalOverlay}><View style={styles.modal}><Text style={styles.modalTitle}>Nuevo Mecánico</Text><TextInput style={styles.modalInput} placeholder="Nombre" value={newMecanico.nombre} onChangeText={t => setNewMecanico({...newMecanico, nombre: t})} /><TextInput style={styles.modalInput} placeholder="Email" value={newMecanico.email} onChangeText={t => setNewMecanico({...newMecanico, email: t})} keyboardType="email-address" /><TextInput style={styles.modalInput} placeholder="Móvil" value={newMecanico.movil} onChangeText={t => setNewMecanico({...newMecanico, movil: t})} keyboardType="phone-pad" /><TextInput style={styles.modalInput} placeholder="Contraseña" value={newMecanico.contrasena} onChangeText={t => setNewMecanico({...newMecanico, contrasena: t})} secureTextEntry /><View style={styles.modalButtons}><TouchableOpacity style={styles.modalBtn} onPress={handleAddMecanico}><Text style={styles.modalBtnText}>Crear</Text></TouchableOpacity><TouchableOpacity style={[styles.modalBtn, styles.modalBtnCancel]} onPress={() => setShowAddMecanicoModal(false)}><Text style={styles.modalBtnTextCancel}>Cancelar</Text></TouchableOpacity></View></View></View>}
       {editingMecanico && <View style={styles.modalOverlay}><View style={styles.modal}><Text style={styles.modalTitle}>Editar Mecánico</Text><TextInput style={styles.modalInput} placeholder="Nombre" value={editData.nombre} onChangeText={t => setEditData({...editData, nombre: t})} /><TextInput style={styles.modalInput} placeholder="Email" value={editData.email} onChangeText={t => setEditData({...editData, email: t})} keyboardType="email-address" /><TextInput style={styles.modalInput} placeholder="Móvil" value={editData.movil} onChangeText={t => setEditData({...editData, movil: t})} keyboardType="phone-pad" /><View style={styles.modalButtons}><TouchableOpacity style={styles.modalBtn} onPress={handleEditMecanico}><Text style={styles.modalBtnText}>Guardar</Text></TouchableOpacity><TouchableOpacity style={[styles.modalBtn, styles.modalBtnCancel]} onPress={() => setEditingMecanico(null)}><Text style={styles.modalBtnTextCancel}>Cancelar</Text></TouchableOpacity></View></View></View>}
       {showVehicleModal && <View style={styles.modalOverlay}><View style={styles.modal}><Text style={styles.modalTitle}>Nuevo Vehículo</Text><TextInput style={styles.modalInput} placeholder="Matrícula" value={newVehicle.matricula} onChangeText={t => setNewVehicle({...newVehicle, matricula: t.toUpperCase()})} /><TextInput style={styles.modalInput} placeholder="Marca" value={newVehicle.marca} onChangeText={t => setNewVehicle({...newVehicle, marca: t})} /><TextInput style={styles.modalInput} placeholder="Modelo" value={newVehicle.modelo} onChangeText={t => setNewVehicle({...newVehicle, modelo: t})} /><TextInput style={styles.modalInput} placeholder="Año" value={newVehicle.anio} onChangeText={t => setNewVehicle({...newVehicle, anio: t})} keyboardType="numeric" /><TextInput style={styles.modalInput} placeholder="Kilómetros" value={newVehicle.kilometraje} onChangeText={t => setNewVehicle({...newVehicle, kilometraje: t})} keyboardType="numeric" /><View style={styles.modalButtons}><TouchableOpacity style={styles.modalBtn} onPress={handleAddVehicle}><Text style={styles.modalBtnText}>Crear</Text></TouchableOpacity><TouchableOpacity style={[styles.modalBtn, styles.modalBtnCancel]} onPress={() => setShowVehicleModal(false)}><Text style={styles.modalBtnTextCancel}>Cancelar</Text></TouchableOpacity></View></View></View>}
+      {showVehicleDetail && selectedVehicle && (
+        <Modal visible={showVehicleDetail} transparent animationType="slide">
+          <View style={styles.detailModalOverlay}>
+            <View style={styles.detailModal}>
+              <TouchableOpacity style={styles.closeBtn} onPress={() => setShowVehicleDetail(false)}><Text style={styles.closeBtnText}>✕</Text></TouchableOpacity>
+              {selectedVehicle.foto && <Image source={{ uri: selectedVehicle.foto }} style={styles.detailImage} />}
+              <Text style={styles.detailTitle}>{selectedVehicle.marca} {selectedVehicle.modelo}</Text>
+              <Text style={styles.detailMatricula}>{selectedVehicle.matricula}</Text>
+              <Text style={styles.detailInfo}>Año: {selectedVehicle.anio || '-'}</Text>
+              <Text style={styles.detailInfo}>Kilómetros: {selectedVehicle.kilometraje?.toLocaleString() || 0}</Text>
+              <TouchableOpacity style={styles.photoBtn} onPress={pickImage} disabled={uploading}>
+                {uploading ? <ActivityIndicator color="#fff" /> : <Text style={styles.photoBtnText}>📷 {selectedVehicle.foto ? 'Cambiar Foto' : 'Agregar Foto'}</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -292,9 +341,20 @@ const styles = StyleSheet.create({
   miTrabajoCard: { backgroundColor: '#16213e', padding: 16, marginBottom: 12, borderRadius: 12 },
   miTrabajoMatricula: { fontSize: 20, fontWeight: 'bold', color: '#0ab1e6' },
   vehicleCard: { backgroundColor: '#16213e', padding: 16, marginBottom: 12, borderRadius: 12, borderLeftWidth: 4, borderLeftColor: '#e94560' },
+  vehicleImage: { width: '100%', height: 150, borderRadius: 8, marginBottom: 8 },
   vehicleMatricula: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
   vehicleInfo: { color: '#888', marginTop: 4 },
   vehicleYear: { color: '#666', fontSize: 12, marginTop: 2 },
+  detailModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  detailModal: { backgroundColor: '#16213e', padding: 24, borderRadius: 16, width: '100%', maxWidth: 400 },
+  closeBtn: { position: 'absolute', top: 10, right: 10, padding: 10 },
+  closeBtnText: { color: '#fff', fontSize: 20 },
+  detailImage: { width: '100%', height: 200, borderRadius: 12, marginBottom: 16 },
+  detailTitle: { fontSize: 22, fontWeight: 'bold', color: '#fff', textAlign: 'center' },
+  detailMatricula: { fontSize: 20, fontWeight: 'bold', color: '#0ab1e6', textAlign: 'center', marginVertical: 8 },
+  detailInfo: { color: '#888', fontSize: 14, textAlign: 'center', marginTop: 4 },
+  photoBtn: { backgroundColor: '#e94560', padding: 14, borderRadius: 8, marginTop: 20, alignItems: 'center' },
+  photoBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   iniciarBtn: { backgroundColor: '#3b82f6', padding: 12, borderRadius: 8, marginTop: 12, alignItems: 'center' },
   completarBtn: { backgroundColor: '#10b981', padding: 12, borderRadius: 8, marginTop: 12, alignItems: 'center' },
   btnText: { color: '#fff', fontWeight: 'bold' },
