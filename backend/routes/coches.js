@@ -20,7 +20,7 @@ const authenticate = (req, res, next) => {
 
 router.post("/", authenticate, async (req, res) => {
   try {
-    const { matricula, marca, modelo, anio, kilometraje, cliente_id } = req.body;
+    const { matricula, marca, modelo, anio, kilometraje, cliente_id, foto } = req.body;
     if (!matricula) return res.status(400).json({ msg: "Matrícula obligatoria" });
     let ownerId, estado;
     if (req.user.rol === "admin") {
@@ -31,8 +31,8 @@ router.post("/", authenticate, async (req, res) => {
       estado = "pendiente";
     }
     const result = await pool.query(
-      "INSERT INTO coches (matricula, marca, modelo, anio, kilometraje, cliente_id, estado) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
-      [matricula, marca, modelo, anio, kilometraje, ownerId, estado]
+      "INSERT INTO coches (matricula, marca, modelo, anio, kilometraje, cliente_id, estado, foto) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
+      [matricula, marca, modelo, anio, kilometraje, ownerId, estado, foto]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -68,18 +68,18 @@ router.get("/", authenticate, async (req, res) => {
 
 router.put("/:id", authenticate, async (req, res) => {
   try {
-    const { marca, modelo, anio, kilometraje, itv_vigencia } = req.body;
+    const { marca, modelo, anio, kilometraje, itv_vigencia, foto } = req.body;
     let query, params;
     
     if (req.user.rol === "admin") {
-      query = "UPDATE coches SET marca = COALESCE($1, marca), modelo = COALESCE($2, modelo), anio = COALESCE($3, anio), kilometraje = COALESCE($4, kilometraje), itv_vigencia = COALESCE($5, itv_vigencia) WHERE id = $6 RETURNING *";
-      params = [marca, modelo, anio, kilometraje, itv_vigencia, req.params.id];
+      query = "UPDATE coches SET marca = COALESCE($1, marca), modelo = COALESCE($2, modelo), anio = COALESCE($3, anio), kilometraje = COALESCE($4, kilometraje), itv_vigencia = COALESCE($5, itv_vigencia), foto = COALESCE($6, foto) WHERE id = $7 RETURNING *";
+      params = [marca, modelo, anio, kilometraje, itv_vigencia, foto, req.params.id];
     } else if (req.user.rol === "mecanico") {
-      query = "UPDATE coches SET marca = COALESCE($1, marca), modelo = COALESCE($2, modelo), anio = COALESCE($3, anio), kilometraje = COALESCE($4, kilometraje), itv_vigencia = COALESCE($5, itv_vigencia) WHERE id = $6 RETURNING *";
-      params = [marca, modelo, anio, kilometraje, itv_vigencia, req.params.id];
+      query = "UPDATE coches SET marca = COALESCE($1, marca), modelo = COALESCE($2, modelo), anio = COALESCE($3, anio), kilometraje = COALESCE($4, kilometraje), itv_vigencia = COALESCE($5, itv_vigencia), foto = COALESCE($6, foto) WHERE id = $7 RETURNING *";
+      params = [marca, modelo, anio, kilometraje, itv_vigencia, foto, req.params.id];
     } else {
-      query = "UPDATE coches SET marca = COALESCE($1, marca), modelo = COALESCE($2, modelo), anio = COALESCE($3, anio), kilometraje = COALESCE($4, kilometraje), itv_vigencia = COALESCE($5, itv_vigencia) WHERE id = $6 AND cliente_id = $7 RETURNING *";
-      params = [marca, modelo, anio, kilometraje, itv_vigencia, req.params.id, req.user.id];
+      query = "UPDATE coches SET marca = COALESCE($1, marca), modelo = COALESCE($2, modelo), anio = COALESCE($3, anio), kilometraje = COALESCE($4, kilometraje), itv_vigencia = COALESCE($5, itv_vigencia), foto = COALESCE($6, foto) WHERE id = $7 AND cliente_id = $8 RETURNING *";
+      params = [marca, modelo, anio, kilometraje, itv_vigencia, foto, req.params.id, req.user.id];
     }
     
     const result = await pool.query(query, params);
