@@ -189,6 +189,7 @@ export default function DashboardScreen() {
   };
 
   const getTitle = () => isAdmin ? 'Admin' : isMecanico ? 'Mecánico' : 'Mi Garage';
+  const getTabName = (t: string) => ({ clientes: 'Clientes', mecanicos: 'Mecánicos', citas: 'Citas', taller: 'Mi Taller', trabajos: 'Trabajos' }[t] || t);
 
   return (
     <View style={styles.container}>
@@ -201,12 +202,13 @@ export default function DashboardScreen() {
         </View>
       </View>
       <View style={styles.tabs}>
-        {isAdmin && <TouchableOpacity style={styles.tab} onPress={() => setTab('clientes')}><Text style={styles.tabText}>Clientes</Text></TouchableOpacity>}
-        {isAdmin && <TouchableOpacity style={styles.tab} onPress={() => setTab('mecanicos')}><Text style={styles.tabText}>Mecánicos</Text></TouchableOpacity>}
-        <TouchableOpacity style={styles.tab} onPress={() => setTab('citas')}><Text style={styles.tabText}>Citas</Text></TouchableOpacity>
-        {isMecanico && <TouchableOpacity style={styles.tab} onPress={() => setTab('taller')}><Text style={styles.tabText}>Mi Taller</Text></TouchableOpacity>}
-        {(isMecanico || isAdmin) && <TouchableOpacity style={styles.tab} onPress={() => setTab('trabajos')}><Text style={styles.tabText}>Trabajos</Text></TouchableOpacity>}
+        {isAdmin && <TouchableOpacity style={styles.tab} onPress={() => setTab('clientes')}><Text style={tab === 'clientes' ? styles.tabTextActive : styles.tabText}>Clientes</Text></TouchableOpacity>}
+        {isAdmin && <TouchableOpacity style={styles.tab} onPress={() => setTab('mecanicos')}><Text style={tab === 'mecanicos' ? styles.tabTextActive : styles.tabText}>Mecánicos</Text></TouchableOpacity>}
+        <TouchableOpacity style={styles.tab} onPress={() => setTab('citas')}><Text style={tab === 'citas' ? styles.tabTextActive : styles.tabText}>Citas</Text></TouchableOpacity>
+        {isMecanico && <TouchableOpacity style={styles.tab} onPress={() => setTab('taller')}><Text style={tab === 'taller' ? styles.tabTextActive : styles.tabText}>Mi Taller</Text></TouchableOpacity>}
+        {(isMecanico || isAdmin) && <TouchableOpacity style={styles.tab} onPress={() => setTab('trabajos')}><Text style={tab === 'trabajos' ? styles.tabTextActive : styles.tabText}>Trabajos</Text></TouchableOpacity>}
       </View>
+      <View style={styles.currentTab}><Text style={styles.currentTabText}>{getTabName(tab)}</Text></View>
       {tab === 'clientes' && isAdmin ? detalleMode ? renderDetalleCliente() : <FlatList data={usuarios.filter(u => u.rol === 'cliente')} keyExtractor={i => i.id.toString()} renderItem={renderCliente} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} ListEmptyComponent={<Text style={styles.empty}>Sin clientes</Text>} /> : 
        tab === 'mecanicos' && isAdmin ? mecanicoMode ? renderDetalleMecanico() : <FlatList data={usuarios.filter(u => u.rol === 'mecanico')} keyExtractor={i => i.id.toString()} renderItem={renderMecanico} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} ListEmptyComponent={<Text style={styles.empty}>Sin mecánicos</Text>} /> :
        tab === 'citas' ? <FlatList data={citas} keyExtractor={i => i.id.toString()} renderItem={renderCita} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} /> :
@@ -227,9 +229,12 @@ const styles = StyleSheet.create({
   headerRight: { flexDirection: 'row', gap: 20 },
   addBtn: { color: '#10b981', fontSize: 24, paddingHorizontal: 10 },
   logoutBtn: { color: '#fff', fontSize: 14, fontWeight: 'bold', paddingVertical: 6, paddingHorizontal: 16, backgroundColor: '#e94560', borderRadius: 8, overflow: 'hidden' },
-  tabs: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 10 },
+  tabs: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 10, borderBottomWidth: 1, borderBottomColor: '#333' },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
   tabText: { color: '#888', fontSize: 14 },
+  tabTextActive: { color: '#e94560', fontSize: 14, fontWeight: 'bold' },
+  currentTab: { paddingHorizontal: 20, paddingBottom: 10 },
+  currentTabText: { color: '#666', fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 },
   list: { padding: 20 },
   card: { backgroundColor: '#16213e', padding: 16, marginBottom: 12, borderRadius: 12 },
   empty: { color: '#666', textAlign: 'center', marginTop: 40 },
