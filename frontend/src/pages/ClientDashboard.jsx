@@ -247,8 +247,9 @@ const ClientDashboard = () => {
     return styles[estado] || { bg: '#64748b', text: estado };
   };
 
+  const getUserName = () => user?.nombre || user?.email?.split('@')[0] || 'Cliente';
   const menuItems = [
-    { id: 'garage', label: 'Mi Garage', icon: '🚗' },
+    { id: 'garage', label: `Garaje de ${getUserName()}`, icon: '🚗' },
     { id: 'citas', label: 'Mis Citas', icon: '📅' },
     { id: 'historial', label: 'Historial', icon: '📋' },
     { id: 'itv', label: 'ITV', icon: '📋' },
@@ -261,7 +262,7 @@ const ClientDashboard = () => {
       <aside style={styles.sidebar}>
         <div style={styles.logo}>
           <span style={styles.logoIcon}>🚗</span>
-          <span style={styles.logoText}>MiGarage</span>
+          <span style={styles.logoText}>{getUserName()}</span>
         </div>
         
         <nav style={styles.nav}>
@@ -289,7 +290,7 @@ const ClientDashboard = () => {
         <header style={styles.header}>
           <div style={styles.headerLeft}>
             <span style={styles.headerIcon}>🚗</span>
-            <span style={styles.headerTitle}>MiGarage</span>
+            <span style={styles.headerTitle}>{getUserName()}</span>
           </div>
           <div style={styles.headerRight}>
             <span style={styles.userName}>{user?.email?.split('@')[0]}</span>
@@ -300,7 +301,7 @@ const ClientDashboard = () => {
           {activeTab === 'garage' && (
             <div>
               <div style={styles.topBar}>
-                <h2 style={styles.pageTitle}>Mi Garage</h2>
+                <h2 style={styles.pageTitle}>Garaje de {getUserName()}</h2>
                 <button onClick={() => { setShowModal(true); setFormData({}); }} style={styles.addBtn}>
                   + Agregar Vehículo
                 </button>
