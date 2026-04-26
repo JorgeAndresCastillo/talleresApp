@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, ScrollView } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, ScrollView, PanResponder } from 'react-native';
 import { useRouter } from 'expo-router';
 import { api, setToken, getUser } from '../src/api';
 
@@ -129,10 +129,18 @@ const selectCliente = (cliente: Usuario) => {
 const renderDetalleCliente = () => {
     if (!selectedCliente || !detalleMode) return null;
     const clientCars = cochesTodos.filter(c => c.cliente_id === selectedCliente.id);
+    
+    const panResponder = PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dx) > 10,
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dx > 50) setDetalleMode(false);
+      }
+    });
+    
     return (
-      <ScrollView style={styles.detalleView}>
+      <ScrollView style={styles.detalleView} {...panResponder.panHandlers}>
         <TouchableOpacity style={styles.backBtn} onPress={() => setDetalleMode(false)}>
-          <Text style={styles.backText}>← Volver</Text>
+          <Text style={styles.backText}>← Volver (swipe right)</Text>
         </TouchableOpacity>
         <View style={styles.detalleHeader}>
           <Text style={styles.detalleNombre}>{selectedCliente.nombre}</Text>
