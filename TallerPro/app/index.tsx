@@ -6,7 +6,7 @@ import { api, setToken, getUser } from '../src/api';
 interface Usuario { id: number; nombre: string; email: string; rol: string; movil: string; }
 interface Coche { id: number; matricula: string; marca: string; modelo: string; anio: number; kilometraje: number; cliente_id: number; }
 interface Cita { id: number; fecha: string; hora: string; estado: string; descripcion: string; matricula: string; }
-interface Trabajo { id: number; descripcion: string; estado: string; matricula: string; precio: number; }
+interface Trabajo { id: number; descripcion: string; estado: string; matricula: string; precio: number; mecanico_id?: number; }
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -16,6 +16,8 @@ export default function DashboardScreen() {
   
   const [selectedCliente, setSelectedCliente] = useState<Usuario | null>(null);
   const [detalleMode, setDetalleMode] = useState(false);
+  const [selectedMecanico, setSelectedMecanico] = useState<Usuario | null>(null);
+  const [mecanicoMode, setMecanicoMode] = useState(false);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [cochesTodos, setCochesTodos] = useState<Coche[]>([]);
   const [citas, setCitas] = useState<Cita[]>([]);
@@ -25,7 +27,10 @@ export default function DashboardScreen() {
   const [tab, setTab] = useState<'clientes' | 'mecanicos' | 'citas' | 'trabajos' | 'taller'>('clientes');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingClient, setEditingClient] = useState<Usuario | null>(null);
+  const [editingMecanico, setEditingMecanico] = useState<Usuario | null>(null);
+  const [showAddMecanicoModal, setShowAddMecanicoModal] = useState(false);
   const [newClient, setNewClient] = useState({ nombre: '', email: '', movil: '', contrasena: '' });
+  const [newMecanico, setNewMecanico] = useState({ nombre: '', email: '', movil: '', contrasena: '' });
   const [editData, setEditData] = useState({ nombre: '', email: '', movil: '' });
 
   const loadData = async () => {
@@ -89,6 +94,26 @@ export default function DashboardScreen() {
 
   const openEditCliente = (cliente: Usuario) => { setEditingClient(cliente); setEditData({ nombre: cliente.nombre, email: cliente.email, movil: cliente.movil }); };
 
+  const handleAddMecanico = async () => {
+    if (!newMecanico.nombre || !newMecanico.email || !newMecanico.movil || !newMecanico.contrasena) { Alert.alert('Todos los campos son obligatorios'); return; }
+    try {
+      const result = await api.usuarios.create({ ...newMecanico, rol: 'mecanico' });
+      if (result.id) { setShowAddMecanicoModal(false); setNewMecanico({ nombre: '', email: '', movil: '', contrasena: '' }); loadData(); Alert.alert('Mecánico creado'); }
+      else { Alert.alert(result.msg || 'Error al crear'); }
+    } catch (e) { Alert.alert('Error de conexión'); }
+  };
+
+  const handleEditMecanico = async () => {
+    if (!editData.nombre || !editData.email || !editData.movil) { Alert.alert('Todos los campos son obligatorios'); return; }
+    try {
+      const result = await api.usuarios.update(editingMecanico!.id, editData);
+      if (result.id) { setEditingMecanico(null); loadData(); Alert.alert('Mecánico actualizado'); }
+      else { Alert.alert(result.msg || 'Error al actualizar'); }
+    } catch (e) { Alert.alert('Error de conexión'); }
+  };
+
+  const openEditMecanico = (mecanico: Usuario) => { setEditingMecanico(mecanico); setEditData({ nombre: mecanico.nombre, email: mecanico.email, movil: mecanico.movil }); };
+
   const renderCliente = ({ item }: { item: Usuario }) => (
     <TouchableOpacity style={styles.clienteCard} onPress={() => { setSelectedCliente(item); setDetalleMode(true); }}>
       <Text style={styles.clienteNombre}>{item.nombre}</Text>
@@ -97,11 +122,11 @@ export default function DashboardScreen() {
   );
 
   const renderMecanico = ({ item }: { item: Usuario }) => (
-    <View style={styles.clienteCard}>
+    <TouchableOpacity style={styles.clienteCard} onPress={() => { setSelectedMecanico(item); setMecanicoMode(true); }}>
       <Text style={styles.clienteNombre}>{item.nombre}</Text>
       <Text style={styles.clienteEmail}>{item.email}</Text>
       <Text style={styles.clienteMovil}>📱 {item.movil}</Text>
-    </View>
+    </TouchableOpacity>
   );
 
   const renderDetalleCliente = () => {
@@ -120,6 +145,27 @@ export default function DashboardScreen() {
         </View>
         <Text style={styles.detalleSubtitle}>Vehículos ({clientCars.length})</Text>
         {clientCars.map(c => <View key={c.id} style={styles.detalleCoche}><Text style={styles.detalleMatricula}>{c.matricula}</Text><Text style={styles.detalleModelo}>{c.marca} {c.modelo}</Text></View>)}
+      </ScrollView>
+    );
+  };
+
+  const renderDetalleMecanico = () => {
+    if (!selectedMecanico || !mecanicoMode) return null;
+    const mecanicoJobs = trabajos.filter(t => t.mecanico_id === selectedMecanico.id);
+    const panResponder = PanResponder.create({ onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 10, onPanResponderMove: (_, g) => { if (g.dx > 50) setMecanicoMode(false); } });
+    return (
+      <ScrollView style={styles.detalleView} {...panResponder.panHandlers}>
+        <View style={styles.detalleActions}>
+          <TouchableOpacity onPress={() => setMecanicoMode(false)}><Text style={styles.backText}>← Volver</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.editBtn} onPress={() => openEditMecanico(selectedMecanico)}><Text style={styles.editBtnText}>✏️</Text></TouchableOpacity>
+        </View>
+        <View style={styles.detalleHeader}>
+          <Text style={styles.detalleNombre}>{selectedMecanico.nombre}</Text>
+          <Text style={styles.detalleEmail}>{selectedMecanico.email}</Text>
+          <Text style={styles.clienteMovil}>📱 {selectedMecanico.movil}</Text>
+        </View>
+        <Text style={styles.detalleSubtitle}>Trabajos ({mecanicoJobs.length})</Text>
+        {mecanicoJobs.map(t => <View key={t.id} style={styles.detalleCoche}><Text style={styles.detalleMatricula}>{t.matricula}</Text><Text style={styles.detalleModelo}>{t.descripcion}</Text></View>)}
       </ScrollView>
     );
   };
@@ -150,6 +196,7 @@ export default function DashboardScreen() {
         <Text style={styles.title}>{getTitle()}</Text>
         <View style={styles.headerRight}>
           {tab === 'clientes' && isAdmin && <TouchableOpacity onPress={() => setShowAddModal(true)}><Text style={styles.addBtn}>+</Text></TouchableOpacity>}
+          {tab === 'mecanicos' && isAdmin && <TouchableOpacity onPress={() => setShowAddMecanicoModal(true)}><Text style={styles.addBtn}>+</Text></TouchableOpacity>}
           <TouchableOpacity onPress={() => { setToken(null); router.replace('/login'); }}><Text style={styles.logout}>Salir</Text></TouchableOpacity>
         </View>
       </View>
@@ -161,12 +208,14 @@ export default function DashboardScreen() {
         {(isMecanico || isAdmin) && <TouchableOpacity style={styles.tab} onPress={() => setTab('trabajos')}><Text style={styles.tabText}>Trabajos</Text></TouchableOpacity>}
       </View>
       {tab === 'clientes' && isAdmin ? detalleMode ? renderDetalleCliente() : <FlatList data={usuarios.filter(u => u.rol === 'cliente')} keyExtractor={i => i.id.toString()} renderItem={renderCliente} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} ListEmptyComponent={<Text style={styles.empty}>Sin clientes</Text>} /> : 
-       tab === 'mecanicos' && isAdmin ? <FlatList data={usuarios.filter(u => u.rol === 'mecanico')} keyExtractor={i => i.id.toString()} renderItem={renderMecanico} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} ListEmptyComponent={<Text style={styles.empty}>Sin mecánicos</Text>} /> :
+       tab === 'mecanicos' && isAdmin ? mecanicoMode ? renderDetalleMecanico() : <FlatList data={usuarios.filter(u => u.rol === 'mecanico')} keyExtractor={i => i.id.toString()} renderItem={renderMecanico} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} ListEmptyComponent={<Text style={styles.empty}>Sin mecánicos</Text>} /> :
        tab === 'citas' ? <FlatList data={citas} keyExtractor={i => i.id.toString()} renderItem={renderCita} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} /> :
        tab === 'taller' && isMecanico ? <FlatList data={myJobs} keyExtractor={i => i.id.toString()} renderItem={renderMiTrabajo} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} ListEmptyComponent={<Text style={styles.empty}>Sin trabajos</Text>} /> :
        <FlatList data={trabajos} keyExtractor={i => i.id.toString()} renderItem={({ item }) => <View style={styles.card}><Text>{item.matricula}</Text></View>} contentContainerStyle={styles.list} />}
       {showAddModal && <View style={styles.modalOverlay}><View style={styles.modal}><Text style={styles.modalTitle}>Nuevo Cliente</Text><TextInput style={styles.modalInput} placeholder="Nombre" value={newClient.nombre} onChangeText={t => setNewClient({...newClient, nombre: t})} /><TextInput style={styles.modalInput} placeholder="Email" value={newClient.email} onChangeText={t => setNewClient({...newClient, email: t})} keyboardType="email-address" /><TextInput style={styles.modalInput} placeholder="Móvil" value={newClient.movil} onChangeText={t => setNewClient({...newClient, movil: t})} keyboardType="phone-pad" /><TextInput style={styles.modalInput} placeholder="Contraseña" value={newClient.contrasena} onChangeText={t => setNewClient({...newClient, contrasena: t})} secureTextEntry /><View style={styles.modalButtons}><TouchableOpacity style={styles.modalBtn} onPress={handleAddClient}><Text style={styles.modalBtnText}>Crear</Text></TouchableOpacity><TouchableOpacity style={[styles.modalBtn, styles.modalBtnCancel]} onPress={() => setShowAddModal(false)}><Text style={styles.modalBtnTextCancel}>Cancelar</Text></TouchableOpacity></View></View></View>}
       {editingClient && <View style={styles.modalOverlay}><View style={styles.modal}><Text style={styles.modalTitle}>Editar Cliente</Text><TextInput style={styles.modalInput} placeholder="Nombre" value={editData.nombre} onChangeText={t => setEditData({...editData, nombre: t})} /><TextInput style={styles.modalInput} placeholder="Email" value={editData.email} onChangeText={t => setEditData({...editData, email: t})} keyboardType="email-address" /><TextInput style={styles.modalInput} placeholder="Móvil" value={editData.movil} onChangeText={t => setEditData({...editData, movil: t})} keyboardType="phone-pad" /><View style={styles.modalButtons}><TouchableOpacity style={styles.modalBtn} onPress={handleEditClient}><Text style={styles.modalBtnText}>Guardar</Text></TouchableOpacity><TouchableOpacity style={[styles.modalBtn, styles.modalBtnCancel]} onPress={() => setEditingClient(null)}><Text style={styles.modalBtnTextCancel}>Cancelar</Text></TouchableOpacity></View></View></View>}
+      {showAddMecanicoModal && <View style={styles.modalOverlay}><View style={styles.modal}><Text style={styles.modalTitle}>Nuevo Mecánico</Text><TextInput style={styles.modalInput} placeholder="Nombre" value={newMecanico.nombre} onChangeText={t => setNewMecanico({...newMecanico, nombre: t})} /><TextInput style={styles.modalInput} placeholder="Email" value={newMecanico.email} onChangeText={t => setNewMecanico({...newMecanico, email: t})} keyboardType="email-address" /><TextInput style={styles.modalInput} placeholder="Móvil" value={newMecanico.movil} onChangeText={t => setNewMecanico({...newMecanico, movil: t})} keyboardType="phone-pad" /><TextInput style={styles.modalInput} placeholder="Contraseña" value={newMecanico.contrasena} onChangeText={t => setNewMecanico({...newMecanico, contrasena: t})} secureTextEntry /><View style={styles.modalButtons}><TouchableOpacity style={styles.modalBtn} onPress={handleAddMecanico}><Text style={styles.modalBtnText}>Crear</Text></TouchableOpacity><TouchableOpacity style={[styles.modalBtn, styles.modalBtnCancel]} onPress={() => setShowAddMecanicoModal(false)}><Text style={styles.modalBtnTextCancel}>Cancelar</Text></TouchableOpacity></View></View></View>}
+      {editingMecanico && <View style={styles.modalOverlay}><View style={styles.modal}><Text style={styles.modalTitle}>Editar Mecánico</Text><TextInput style={styles.modalInput} placeholder="Nombre" value={editData.nombre} onChangeText={t => setEditData({...editData, nombre: t})} /><TextInput style={styles.modalInput} placeholder="Email" value={editData.email} onChangeText={t => setEditData({...editData, email: t})} keyboardType="email-address" /><TextInput style={styles.modalInput} placeholder="Móvil" value={editData.movil} onChangeText={t => setEditData({...editData, movil: t})} keyboardType="phone-pad" /><View style={styles.modalButtons}><TouchableOpacity style={styles.modalBtn} onPress={handleEditMecanico}><Text style={styles.modalBtnText}>Guardar</Text></TouchableOpacity><TouchableOpacity style={[styles.modalBtn, styles.modalBtnCancel]} onPress={() => setEditingMecanico(null)}><Text style={styles.modalBtnTextCancel}>Cancelar</Text></TouchableOpacity></View></View></View>}
     </View>
   );
 }
