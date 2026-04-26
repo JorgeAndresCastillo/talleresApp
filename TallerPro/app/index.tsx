@@ -188,7 +188,7 @@ export default function DashboardScreen() {
     );
   };
 
-  const getTitle = () => isAdmin ? 'Admin' : isMecanico ? 'Mecánico' : 'Mi Garage';
+  const getTitle = () => user?.nombre || (isAdmin ? 'Admin' : isMecanico ? 'Mecánico' : 'Mi Garage');
   const getTabName = (t: string) => ({ clientes: 'Clientes', mecanicos: 'Mecánicos', citas: 'Citas', taller: 'Mi Taller', trabajos: 'Trabajos' }[t] || t);
 
   return (
