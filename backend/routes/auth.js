@@ -83,7 +83,7 @@ router.post("/login", async (req, res) => {
       { expiresIn: "8h" }, // Token válido 8 horas
     );
 
-    res.status(200).json({ msg: "Login exitoso", token, id: user.id, rol: user.rol, email: user.email });
+    res.status(200).json({ msg: "Login exitoso", token, id: user.id, rol: user.rol, email: user.email, nombre: user.nombre });
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ msg: "Error del servidor" });
